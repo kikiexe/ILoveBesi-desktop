@@ -14,7 +14,12 @@ export function formatThickness(mm: number): string {
 }
 
 export function parseNumericInput(val: string): number {
-  const cleaned = val.replace(/[^0-9.-]/g, "");
+  if (!val) return 0;
+  let normalized = val.trim();
+  if (normalized.includes("Rp") || (normalized.match(/\./g) || []).length > 1) {
+    normalized = normalized.replace(/\./g, "");
+  }
+  const cleaned = normalized.replace(/[^0-9.-]/g, "");
   const num = parseFloat(cleaned);
   return Number.isNaN(num) ? 0 : num;
 }
