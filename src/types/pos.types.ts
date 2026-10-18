@@ -5,6 +5,7 @@ export type Customer = Database["public"]["Tables"]["customers"]["Row"];
 export type Sale = Database["public"]["Tables"]["sales"]["Row"];
 export type SaleItem = Database["public"]["Tables"]["sale_items"]["Row"];
 export type ReceivablePayment = Database["public"]["Tables"]["receivable_payments"]["Row"];
+export type CashierShift = Database["public"]["Tables"]["cashier_shifts"]["Row"];
 
 export interface CartItem {
   product_id: string;
@@ -38,7 +39,9 @@ export type ActiveModal =
   | "TODAY_HISTORY"
   | "INSTALLMENT"
   | "CONFIRM_LOGOUT"
-  | "CONFIRM_CLEAR";
+  | "CONFIRM_CLEAR"
+  | "CASHIER_SHIFT_OPEN"
+  | "CASHIER_SHIFT_CLOSE";
 
 export type PrintMode = "FAKTUR" | "SURAT_JALAN";
 
