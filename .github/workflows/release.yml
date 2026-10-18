@@ -128,6 +128,66 @@ jobs:
           releaseDraft: true
           args: ${{ matrix.target && format('-{0}target {1}', '-', matrix.target) || '' }}
 
+      - name: Package Linux Installers and Guide into ZIP
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          RPM_FILE=$(find src-tauri/target -name "*.rpm" | head -n 1)
+          DEB_FILE=$(find src-tauri/target -name "*.deb" | head -n 1)
+          APPIMAGE_FILE=$(find src-tauri/target -name "*.AppImage" | head -n 1)
+
+          if [ -n "$RPM_FILE" ]; then
+            zip -j ILoveBesi-POS-Linux-RPM.zip "$RPM_FILE" PANDUAN-INSTALASI-DAN-PENGGUNAAN.txt
+          fi
+          if [ -n "$DEB_FILE" ]; then
+            zip -j ILoveBesi-POS-Linux-DEB.zip "$DEB_FILE" PANDUAN-INSTALASI-DAN-PENGGUNAAN.txt
+          fi
+          if [ -n "$APPIMAGE_FILE" ]; then
+            zip -j ILoveBesi-POS-Linux-AppImage.zip "$APPIMAGE_FILE" PANDUAN-INSTALASI-DAN-PENGGUNAAN.txt
+          fi
+
+      - name: Package Windows Installer and Guide into ZIP
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem -Path "src-tauri\target" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*bundle*" } | Select-Object -First 1)?.FullName
+          $msi = (Get-ChildItem -Path "src-tauri\target" -Filter "*.msi" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*bundle*" } | Select-Object -First 1)?.FullName
+          New-Item -ItemType Directory -Path "win_pkg" -Force
+          if ($exe) { Copy-Item $exe -Destination "win_pkg\" }
+          if ($msi) { Copy-Item $msi -Destination "win_pkg\" }
+          Copy-Item "PANDUAN-INSTALASI-DAN-PENGGUNAAN.txt" -Destination "win_pkg\"
+          Compress-Archive -Path "win_pkg\*" -DestinationPath "ILoveBesi-POS-Windows-64bit.zip" -Force
+
+      - name: Package macOS Installer and Guide into ZIP
+        if: matrix.platform == 'macos-latest'
+        run: |
+          DMG_FILE=$(find src-tauri/target -name "*.dmg" | head -n 1)
+          if [ -n "$DMG_FILE" ]; then
+            if [ "${{ matrix.target }}" = "aarch64-apple-darwin" ]; then
+              zip -j ILoveBesi-POS-macOS-Apple-Silicon.zip "$DMG_FILE" PANDUAN-INSTALASI-DAN-PENGGUNAAN.txt
+            else
+              zip -j ILoveBesi-POS-macOS-Intel.zip "$DMG_FILE" PANDUAN-INSTALASI-DAN-PENGGUNAAN.txt
+            fi
+          fi
+
+      - name: Upload ZIP Packages and Guide to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          CLOBBER_OPT=$(printf '%s%s' '-' '-clobber')
+
+          ZIP_FILES=$(ls ILoveBesi-POS-*.zip 2>/dev/null || true)
+          if [ -n "$ZIP_FILES" ]; then
+            echo "Mengunggah paket ZIP ke release: $ZIP_FILES"
+            gh release upload "$TAG" $ZIP_FILES $CLOBBER_OPT
+          fi
+
+          if [ "${{ matrix.platform }}" = "ubuntu-22.04" ] && [ -f "PANDUAN-INSTALASI-DAN-PENGGUNAAN.txt" ]; then
+            echo "Mengunggah PANDUAN-INSTALASI-DAN-PENGGUNAAN.txt dari runner Linux"
+            gh release upload "$TAG" "PANDUAN-INSTALASI-DAN-PENGGUNAAN.txt" $CLOBBER_OPT
+          fi
+
   publish-release:
     name: Publikasikan Release
     needs: [create-release, release]
