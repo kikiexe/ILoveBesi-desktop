@@ -1,6 +1,6 @@
 [package]
 name = "ilovebesi-desktop"
-version = "1.0.1"
+version = "1.0.2"
 description = "ILoveBesi - Aplikasi Kasir Desktop POS"
 authors = ["ILoveBesi Team"]
 edition = "2021"
