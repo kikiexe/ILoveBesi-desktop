@@ -122,7 +122,7 @@ export default function CustomerModal({
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
     >
-      <div className="flex h-[560px] w-full max-w-2xl flex-col rounded-md border border-slate-300 bg-white shadow-xl">
+      <div className="flex h-140 w-full max-w-2xl flex-col rounded-md border border-slate-300 bg-white shadow-xl">
         {/* Header Modal */}
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <div>
@@ -332,7 +332,7 @@ export default function CustomerModal({
                     id="new-cust-limit"
                     type="number"
                     min="0"
-                    step="500000"
+                    step="any"
                     placeholder="0"
                     value={newCreditLimit}
                     onChange={(e) =>

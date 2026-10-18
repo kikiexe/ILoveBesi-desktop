@@ -403,8 +403,7 @@ export default function InstallmentModal({
                       id="pay-amount-input"
                       type="number"
                       min="1"
-                      max={selectedSale.remaining_debt}
-                      step="1000"
+                      step="any"
                       required
                       value={payAmount}
                       onChange={(e) =>

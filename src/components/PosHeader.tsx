@@ -9,7 +9,7 @@ interface PosHeaderProps {
   selectedCustomer: Customer | null;
   grandTotal: number;
   onOpenCustomerModal: () => void;
-  onLogoutRequest: () => void;
+  onLogoutRequest?: () => void;
 }
 
 export default function PosHeader({
@@ -18,7 +18,6 @@ export default function PosHeader({
   selectedCustomer,
   grandTotal,
   onOpenCustomerModal,
-  onLogoutRequest,
 }: PosHeaderProps) {
   const [currentDateTime, setCurrentDateTime] = useState<string>("");
 
@@ -61,7 +60,7 @@ export default function PosHeader({
           <div className="text-[11px] font-semibold text-slate-700">Pelanggan Aktif:</div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-slate-900">
-              {selectedCustomer ? selectedCustomer.name : "UMUM (Pelanggan Tunai)"}
+              {selectedCustomer ? selectedCustomer.name : "UMUM"}
             </span>
             {selectedCustomer && (
               <span className="rounded bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-900 border border-blue-200">
@@ -79,9 +78,9 @@ export default function PosHeader({
         </button>
       </div>
 
-      {/* Kolom Kanan: Kotak Grand Total Besar & Tombol Keluar */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-full min-w-[260px] flex-col justify-center rounded-md bg-blue-900 px-4 py-1 text-right text-white">
+      {/* Kolom Kanan: Kotak Grand Total Besar */}
+      <div className="flex items-center">
+        <div className="flex h-full min-w-65 flex-col justify-center rounded-md bg-blue-900 px-4 py-1 text-right text-white">
           <span className="text-[11px] font-semibold tracking-wider uppercase text-blue-200">
             Total Tagihan
           </span>
@@ -89,14 +88,6 @@ export default function PosHeader({
             {formatRupiah(grandTotal)}
           </span>
         </div>
-
-        <button
-          type="button"
-          onClick={onLogoutRequest}
-          className="h-10 rounded border border-slate-300 bg-white px-3 text-xs font-bold text-red-700 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
-        >
-          [Esc] Keluar
-        </button>
       </div>
     </header>
   );

@@ -325,7 +325,6 @@ export default function App() {
         selectedCustomer={selectedCustomer}
         grandTotal={grandTotal}
         onOpenCustomerModal={() => setActiveModal("CUSTOMER")}
-        onLogoutRequest={() => setActiveModal("CONFIRM_LOGOUT")}
       />
 
       {/* 2. Bar Input Cepat Cari Barang */}

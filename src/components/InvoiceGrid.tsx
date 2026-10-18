@@ -109,7 +109,7 @@ export default function InvoiceGrid({
                     type="number"
                     min="0"
                     max="100"
-                    step="0.5"
+                    step="any"
                     value={item.discount_pct}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);

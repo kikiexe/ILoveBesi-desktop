@@ -273,7 +273,7 @@ const QuickItemInput = forwardRef<QuickItemInputHandle, QuickItemInputProps>(
               type="number"
               min="0"
               max="100"
-              step="0.5"
+              step="any"
               value={discountPct}
               onChange={(e) =>
                 setDiscountPct(

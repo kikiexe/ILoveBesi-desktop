@@ -46,7 +46,7 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
               <div>
                 Pelanggan:{" "}
                 <strong className="text-xs">
-                  {data.customer ? data.customer.name : "UMUM (Pelanggan Tunai)"}
+                  {data.customer ? data.customer.name : "UMUM"}
                 </strong>
               </div>
               {data.customer?.phone && <div>No. Telp: {data.customer.phone}</div>}
