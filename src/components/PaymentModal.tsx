@@ -21,7 +21,7 @@ interface SavedSaleResult {
   sale_id: string;
   invoice_number: string;
   sale_date: string;
-  payment_type: "TUNAI" | "KREDIT";
+  payment_type: "TUNAI" | "QRIS" | "KREDIT";
   payment_status: "LUNAS" | "BELUM_LUNAS";
   grand_total: number;
   paid_amount: number;
@@ -49,7 +49,8 @@ export default function PaymentModal({
   onSaleCompleted,
   onTriggerPrint,
 }: PaymentModalProps) {
-  const [paymentType, setPaymentType] = useState<"TUNAI" | "KREDIT">("TUNAI");
+  const [paymentType, setPaymentType] = useState<"TUNAI" | "QRIS" | "KREDIT">("TUNAI");
+  const [qrisRef, setQrisRef] = useState<string>("");
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [cashReceived, setCashReceived] = useState<number>(0);
   const [downPayment, setDownPayment] = useState<number>(0);
@@ -66,10 +67,11 @@ export default function PaymentModal({
   const changeAmount = Math.max(0, cashReceived - grandTotal);
   const remainingDebt = Math.max(0, grandTotal - downPayment);
 
-  // Dependency strictly [isOpen, initialSubtotal] to prevent resetting while typing discount
+  // Re-initialize form exclusively when modal opens
   useEffect(() => {
     if (isOpen) {
       setPaymentType("TUNAI");
+      setQrisRef("");
       setDiscountAmount(0);
       setCashReceived(initialSubtotal);
       setDownPayment(0);
@@ -79,7 +81,7 @@ export default function PaymentModal({
       setSavedSale(null);
       setSavedSnapshot(null);
     }
-  }, [isOpen, initialSubtotal]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -124,14 +126,21 @@ export default function PaymentModal({
       tax_pct: it.tax_pct,
     }));
 
+    const effectiveNotes =
+      paymentType === "QRIS" && qrisRef.trim()
+        ? `[QRIS Ref: ${qrisRef.trim()}] ${notes.trim()}`.trim()
+        : paymentType === "QRIS"
+        ? `[QRIS] ${notes.trim()}`.trim()
+        : notes.trim();
+
     const validation = createSaleSchema.safeParse({
       payment_type: paymentType,
       customer_id: customer?.id || undefined,
       discount_amount: discountAmount,
       tax_amount: 0,
-      paid_amount: paymentType === "TUNAI" ? grandTotal : downPayment,
+      paid_amount: paymentType === "KREDIT" ? downPayment : grandTotal,
       due_date: paymentType === "KREDIT" ? dueDate : undefined,
-      notes: notes.trim() || undefined,
+      notes: effectiveNotes || undefined,
       items: payloadItems,
     });
 
@@ -142,20 +151,45 @@ export default function PaymentModal({
 
     setIsSubmitting(true);
     try {
+      let res: SavedSaleResult;
       const { data, error } = await supabase.rpc("rpc_create_sale", {
         p_payment_type: paymentType,
         p_customer_id: customer?.id || undefined,
         p_discount_amount: discountAmount,
         p_tax_amount: 0,
-        p_paid_amount: paymentType === "TUNAI" ? grandTotal : downPayment,
+        p_paid_amount: paymentType === "KREDIT" ? downPayment : grandTotal,
         p_due_date: paymentType === "KREDIT" ? dueDate : undefined,
-        p_notes: notes.trim() || undefined,
+        p_notes: effectiveNotes || undefined,
         p_items: payloadItems,
       });
 
-      if (error) throw new Error(error.message);
-
-      const res = data as unknown as SavedSaleResult;
+      if (error) {
+        // Fallback jika constraint DB cloud belum menjalankan migrasi QRIS
+        if (paymentType === "QRIS" && error.message.toLowerCase().includes("tidak valid")) {
+          const fallbackNotes = effectiveNotes.startsWith("[QRIS]")
+            ? effectiveNotes
+            : `[QRIS] ${effectiveNotes}`.trim();
+          const { data: fbData, error: fbError } = await supabase.rpc("rpc_create_sale", {
+            p_payment_type: "TUNAI",
+            p_customer_id: customer?.id || undefined,
+            p_discount_amount: discountAmount,
+            p_tax_amount: 0,
+            p_paid_amount: grandTotal,
+            p_due_date: undefined,
+            p_notes: fallbackNotes || undefined,
+            p_items: payloadItems,
+          });
+          if (fbError) throw new Error(fbError.message);
+          res = {
+            ...(fbData as unknown as SavedSaleResult),
+            payment_type: "QRIS",
+          };
+        } else {
+          throw new Error(error.message);
+        }
+      } else {
+        res = data as unknown as SavedSaleResult;
+      }
 
       // Preserve snapshot before onSaleCompleted empties active cart items in App state
       setSavedSnapshot({
@@ -279,6 +313,14 @@ export default function PaymentModal({
                     </strong>
                   </div>
                 )}
+                {savedSale.payment_type === "QRIS" && (
+                  <div>
+                    <span className="text-slate-700">Metode: </span>
+                    <strong className="rounded bg-blue-50 px-2 py-0.5 font-bold text-blue-900 border border-blue-300">
+                      QRIS LUNAS
+                    </strong>
+                  </div>
+                )}
                 {savedSale.payment_type === "KREDIT" && (
                   <div>
                     <span className="text-slate-700">Sisa Piutang: </span>
@@ -348,38 +390,49 @@ export default function PaymentModal({
             {/* Pilihan Metode Bayar */}
             <div>
               <div className="text-xs font-bold text-slate-900 mb-1.5">
-                Tipe Pembayaran:
+                Metode Pembayaran:
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setPaymentType("TUNAI")}
-                  className={`h-11 rounded border-2 text-sm font-bold transition-colors ${
+                  className={`h-11 rounded border-2 text-xs font-bold transition-colors ${
                     paymentType === "TUNAI"
                       ? "border-blue-900 bg-blue-50 text-blue-900"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  TUNAI (Lunas Seketika)
+                  TUNAI (Cash)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentType("QRIS")}
+                  className={`h-11 rounded border-2 text-xs font-bold transition-colors ${
+                    paymentType === "QRIS"
+                      ? "border-blue-900 bg-blue-50 text-blue-900"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  QRIS (Non-Tunai)
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentType("KREDIT")}
-                  className={`h-11 rounded border-2 text-sm font-bold transition-colors ${
+                  className={`h-11 rounded border-2 text-xs font-bold transition-colors ${
                     paymentType === "KREDIT"
                       ? "border-blue-900 bg-blue-50 text-blue-900"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  KREDIT / TEMPO (Piutang)
+                  KREDIT (Tempo)
                 </button>
               </div>
             </div>
 
-            {/* Ringkasan Subtotal & Diskon Nota */}
+            {/* Ringkasan Subtotal & Diskon Tambahan Nota */}
             <div className="grid grid-cols-2 gap-3 rounded border border-slate-200 bg-slate-50 p-3">
               <div>
-                <span className="text-xs text-slate-700">Subtotal Kotor:</span>
+                <span className="text-xs text-slate-700">Subtotal Barang:</span>
                 <div className="font-mono text-sm font-bold tabular-nums text-slate-900">
                   {formatRupiah(initialSubtotal)}
                 </div>
@@ -390,13 +443,13 @@ export default function PaymentModal({
                   htmlFor="payment-discount"
                   className="block text-xs font-bold text-slate-900"
                 >
-                  Potongan Diskon Nota (Rp)
+                  Diskon Ekstra Nota (Rp) [Opsional]
                 </label>
                 <input
                   id="payment-discount"
                   type="number"
                   min="0"
-                  step="1000"
+                  step="any"
                   value={discountAmount}
                   onChange={(e) =>
                     setDiscountAmount(
@@ -440,7 +493,7 @@ export default function PaymentModal({
                   id="cash-received-input"
                   type="number"
                   min="0"
-                  step="5000"
+                  step="any"
                   autoFocus
                   required
                   value={cashReceived}
@@ -463,6 +516,42 @@ export default function PaymentModal({
               </div>
             )}
 
+            {/* Form Khusus QRIS */}
+            {paymentType === "QRIS" && (
+              <div className="space-y-3 rounded border border-blue-200 bg-blue-50/50 p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-blue-900">
+                      Pembayaran QRIS (Lunas Seketika)
+                    </span>
+                    <p className="text-[11px] text-slate-600">
+                      Pastikan pembeli telah memindai QRIS toko dan dana berhasil masuk
+                    </p>
+                  </div>
+                  <span className="rounded bg-blue-100 px-2.5 py-1 font-mono text-xs font-bold text-blue-900 border border-blue-300">
+                    LUNAS {formatRupiah(grandTotal)}
+                  </span>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="qris-ref-input"
+                    className="block text-xs font-bold text-slate-900"
+                  >
+                    Nomor Referensi / Approval QRIS (Opsional)
+                  </label>
+                  <input
+                    id="qris-ref-input"
+                    type="text"
+                    placeholder="Contoh: RRN / Kode Referensi m-banking"
+                    value={qrisRef}
+                    onChange={(e) => setQrisRef(e.target.value)}
+                    className="mt-1 h-10 w-full rounded border border-slate-300 bg-white px-3 text-xs text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Form Khusus KREDIT */}
             {paymentType === "KREDIT" && (
               <div className="space-y-3 rounded border border-slate-300 bg-white p-3">
@@ -478,8 +567,7 @@ export default function PaymentModal({
                       id="down-payment-input"
                       type="number"
                       min="0"
-                      max={grandTotal - 1}
-                      step="50000"
+                      step="any"
                       value={downPayment}
                       onChange={(e) =>
                         setDownPayment(

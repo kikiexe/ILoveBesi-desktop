@@ -10,7 +10,7 @@ export const saleItemSchema = z.object({
 
 export const createSaleSchema = z
   .object({
-    payment_type: z.enum(["TUNAI", "KREDIT"]),
+    payment_type: z.enum(["TUNAI", "QRIS", "KREDIT"]),
     customer_id: z.string().uuid().optional(),
     discount_amount: z.number().nonnegative().default(0),
     tax_amount: z.number().nonnegative().default(0),

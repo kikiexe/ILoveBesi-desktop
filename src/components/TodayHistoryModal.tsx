@@ -15,7 +15,7 @@ interface SaleRowWithRelations {
   id: string;
   invoice_number: string;
   sale_date: string;
-  payment_type: "TUNAI" | "KREDIT";
+  payment_type: "TUNAI" | "QRIS" | "KREDIT" | string;
   payment_status: "LUNAS" | "BELUM_LUNAS";
   subtotal_amount: number;
   discount_amount: number;
@@ -134,8 +134,11 @@ export default function TodayHistoryModal({
           }
         : null,
       cashier_name: "Kasir Aktif",
-      payment_type: sale.payment_type,
-      payment_status: sale.payment_status,
+      payment_type:
+        sale.payment_type === "QRIS" || (sale.notes && sale.notes.includes("[QRIS]"))
+          ? "QRIS"
+          : (sale.payment_type as "TUNAI" | "QRIS" | "KREDIT"),
+      payment_status: sale.payment_status as "LUNAS" | "BELUM_LUNAS",
       items: sale.sale_items.map((it) => {
         // In-memory lookup against v_cashier_products to avoid products RLS restriction
         const prod = products.find((p) => p.id === it.product_id);
@@ -278,12 +281,16 @@ export default function TodayHistoryModal({
                       <td className="px-3 py-2 text-center">
                         <span
                           className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${
-                            s.payment_type === "TUNAI"
+                            s.payment_type === "QRIS" || (s.notes && s.notes.includes("[QRIS]"))
+                              ? "bg-blue-50 text-blue-900 border border-blue-300"
+                              : s.payment_type === "TUNAI"
                               ? "bg-slate-100 text-slate-800 border border-slate-200"
                               : "bg-blue-100 text-blue-900 border border-blue-200"
                           }`}
                         >
-                          {s.payment_type}
+                          {s.payment_type === "QRIS" || (s.notes && s.notes.includes("[QRIS]"))
+                            ? "QRIS"
+                            : s.payment_type}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right font-mono font-bold tabular-nums text-slate-900">

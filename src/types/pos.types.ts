@@ -53,7 +53,7 @@ export interface PrintDocumentData {
     address?: string | null;
   } | null;
   cashier_name: string;
-  payment_type: "TUNAI" | "KREDIT";
+  payment_type: "TUNAI" | "QRIS" | "KREDIT";
   payment_status: "LUNAS" | "BELUM_LUNAS";
   items: {
     sku: string;
