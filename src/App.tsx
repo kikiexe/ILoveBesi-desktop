@@ -6,6 +6,7 @@ import type {
   CartItem,
   ActiveModal,
   PrintDocumentData,
+  CashierShift,
 } from "./types/pos.types";
 import { calculateInvoiceTotals, calculateItemSubtotal } from "./utils/calculation";
 import { usePosShortcuts } from "./hooks/usePosShortcuts";
@@ -21,6 +22,7 @@ import TodayHistoryModal from "./components/TodayHistoryModal";
 import InstallmentModal from "./components/InstallmentModal";
 import PaymentModal from "./components/PaymentModal";
 import PrintableDocument from "./components/PrintableDocument";
+import CashierShiftModal from "./components/CashierShiftModal";
 
 interface CurrentUser {
   id: string;
@@ -33,6 +35,9 @@ export default function App() {
   // Auth state
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Shift state
+  const [activeShift, setActiveShift] = useState<CashierShift | null>(null);
 
   // Products master data (Strictly from v_cashier_products view to prevent HPP leak)
   const [products, setProducts] = useState<CashierProduct[]>([]);
@@ -80,6 +85,30 @@ export default function App() {
     }
   }, []);
 
+  // Check active shift for current user
+  const checkActiveShift = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("cashier_shifts")
+        .select("*")
+        .eq("status", "OPEN")
+        .order("opened_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw new Error(error.message);
+      if (data) {
+        setActiveShift(data);
+      } else {
+        setActiveShift(null);
+        setActiveModal("CASHIER_SHIFT_OPEN");
+      }
+    } catch {
+      setActiveShift(null);
+      setActiveModal("CASHIER_SHIFT_OPEN");
+    }
+  }, []);
+
   // Check existing session
   useEffect(() => {
     const checkSession = async () => {
@@ -93,17 +122,40 @@ export default function App() {
             .from("profiles")
             .select("id, full_name, role")
             .eq("id", session.user.id)
-            .single();
+            .maybeSingle();
 
-          if (profile) {
-            setCurrentUser({
-              id: profile.id,
-              email: session.user.email || "",
-              fullName: profile.full_name,
-              role: profile.role,
-            });
-            loadProducts();
+          let userProfile = profile;
+          if (!userProfile) {
+            const fallbackName =
+              (session.user.user_metadata?.full_name as string) ||
+              session.user.email?.split("@")[0] ||
+              "Kasir Toko";
+
+            const { data: createdProfile } = await supabase
+              .from("profiles")
+              .insert({
+                id: session.user.id,
+                full_name: fallbackName,
+                role: "owner",
+              })
+              .select("id, full_name, role")
+              .single();
+
+            userProfile = createdProfile || {
+              id: session.user.id,
+              full_name: fallbackName,
+              role: "owner",
+            };
           }
+
+          setCurrentUser({
+            id: userProfile.id,
+            email: session.user.email || "",
+            fullName: userProfile.full_name,
+            role: userProfile.role,
+          });
+          loadProducts();
+          checkActiveShift();
         }
       } catch {
         setCurrentUser(null);
@@ -113,15 +165,30 @@ export default function App() {
     };
 
     checkSession();
-  }, [loadProducts]);
+  }, [loadProducts, checkActiveShift]);
 
   // Handle Login success
   const handleLoginSuccess = (user: CurrentUser) => {
     setCurrentUser(user);
     loadProducts();
+    checkActiveShift();
+  };
+
+  // Shift success handlers
+  const handleOpenShiftSuccess = (shift: CashierShift) => {
+    setActiveShift(shift);
+    setActiveModal(null);
     setTimeout(() => {
       quickInputRef.current?.focusSearch();
     }, 100);
+  };
+
+  const handleCloseShiftSuccess = () => {
+    setActiveShift(null);
+    setCartItems([]);
+    setSelectedCustomer(null);
+    setSelectedRowIndex(0);
+    setActiveModal("CASHIER_SHIFT_OPEN");
   };
 
   // Handle Cart item addition
@@ -292,12 +359,13 @@ export default function App() {
     },
     onEscape: () => {
       if (activeModal) {
+        if (activeModal === "CASHIER_SHIFT_OPEN") return;
         setActiveModal(null);
         setTimeout(() => {
           quickInputRef.current?.focusSearch();
         }, 50);
       } else {
-        setActiveModal("CONFIRM_LOGOUT");
+        setActiveModal("CASHIER_SHIFT_CLOSE");
       }
     },
   });
@@ -320,8 +388,9 @@ export default function App() {
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-slate-100 select-none">
       {/* 1. Bar Atas: Info Toko, Jam, Kasir, Status Pelanggan, Kotak Total Besar */}
       <PosHeader
-        cashierName={currentUser.fullName}
+        cashierName={activeShift?.cashier_name || currentUser.fullName}
         cashierRole={currentUser.role}
+        userEmail={currentUser.email}
         selectedCustomer={selectedCustomer}
         grandTotal={grandTotal}
         onOpenCustomerModal={() => setActiveModal("CUSTOMER")}
@@ -369,7 +438,7 @@ export default function App() {
         onF9={() => setActiveModal("STOCK_LOOKUP")}
         onF10={() => setActiveModal("TODAY_HISTORY")}
         onF11={() => setActiveModal("INSTALLMENT")}
-        onEsc={() => setActiveModal("CONFIRM_LOGOUT")}
+        onEsc={() => setActiveModal("CASHIER_SHIFT_CLOSE")}
       />
 
       {/* ========================================================= */}
@@ -449,7 +518,7 @@ export default function App() {
         }}
         items={cartItems}
         customer={selectedCustomer}
-        cashierName={currentUser.fullName}
+        cashierName={activeShift?.cashier_name || currentUser.fullName}
         initialSubtotal={subtotalAmount}
         onOpenCustomerModal={() => setActiveModal("CUSTOMER")}
         onSaleCompleted={() => {
@@ -495,39 +564,19 @@ export default function App() {
         </div>
       )}
 
-      {/* Dialog Konfirmasi Keluar / Logout [Esc] */}
-      {activeModal === "CONFIRM_LOGOUT" && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
-        >
-          <div className="w-full max-w-sm rounded-md border border-slate-300 bg-white p-5 shadow-xl text-center">
-            <h3 className="text-base font-bold text-slate-900">
-              Keluar Sesi Kasir POS?
-            </h3>
-            <p className="mt-2 text-xs text-slate-700">
-              Pastikan seluruh faktur telah tersimpan sebelum keluar dari sistem kasir.
-            </p>
-            <div className="mt-5 flex items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setActiveModal(null)}
-                className="h-10 rounded border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 hover:bg-slate-100"
-              >
-                Lanjutkan Kasir
-              </button>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="h-10 rounded bg-red-700 px-4 text-xs font-bold text-white hover:bg-red-800"
-              >
-                Keluar [Enter]
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal Buka & Tutup Kasir (Shift) */}
+      <CashierShiftModal
+        isOpen={activeModal === "CASHIER_SHIFT_OPEN" || activeModal === "CASHIER_SHIFT_CLOSE"}
+        mode={activeModal === "CASHIER_SHIFT_OPEN" ? "OPEN" : "CLOSE"}
+        activeShift={activeShift}
+        onOpenShiftSuccess={handleOpenShiftSuccess}
+        onCloseShiftSuccess={handleCloseShiftSuccess}
+        onCancelClose={() => {
+          setActiveModal(null);
+          quickInputRef.current?.focusSearch();
+        }}
+        onLogout={handleLogout}
+      />
 
       {/* Komponen Cetak Faktur & Surat Jalan (@media print) */}
       <PrintableDocument data={printDocumentData} />

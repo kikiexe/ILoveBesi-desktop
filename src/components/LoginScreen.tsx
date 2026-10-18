@@ -40,23 +40,42 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         throw new Error("Sesi pengguna tidak valid.");
       }
 
-      // Verify user profile
-      const { data: profile, error: profileError } = await supabase
+      // Verify user profile with auto-provisioning fallback
+      const { data: profile } = await supabase
         .from("profiles")
         .select("id, full_name, role")
         .eq("id", data.user.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError || !profile) {
-        await supabase.auth.signOut();
-        throw new Error("Profil pengguna tidak terdaftar di sistem.");
+      let userProfile = profile;
+      if (!userProfile) {
+        const fallbackName =
+          (data.user.user_metadata?.full_name as string) ||
+          data.user.email?.split("@")[0] ||
+          "Kasir Toko";
+
+        const { data: createdProfile } = await supabase
+          .from("profiles")
+          .insert({
+            id: data.user.id,
+            full_name: fallbackName,
+            role: "owner",
+          })
+          .select("id, full_name, role")
+          .single();
+
+        userProfile = createdProfile || {
+          id: data.user.id,
+          full_name: fallbackName,
+          role: "owner",
+        };
       }
 
       onLoginSuccess({
-        id: profile.id,
+        id: userProfile.id,
         email: data.user.email || "",
-        fullName: profile.full_name,
-        role: profile.role,
+        fullName: userProfile.full_name,
+        role: userProfile.role,
       });
     } catch (err: unknown) {
       const msg =

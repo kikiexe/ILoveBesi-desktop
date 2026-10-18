@@ -6,6 +6,7 @@ import { formatWibDateTime } from "../utils/date";
 interface PosHeaderProps {
   cashierName: string;
   cashierRole: string;
+  userEmail?: string;
   selectedCustomer: Customer | null;
   grandTotal: number;
   onOpenCustomerModal: () => void;
@@ -15,6 +16,7 @@ interface PosHeaderProps {
 export default function PosHeader({
   cashierName,
   cashierRole,
+  userEmail,
   selectedCustomer,
   grandTotal,
   onOpenCustomerModal,
@@ -49,7 +51,8 @@ export default function PosHeader({
           <span className="font-mono">{currentDateTime} WIB</span>
           <span>|</span>
           <span>
-            Kasir: <strong className="text-slate-900">{cashierName}</strong> ({cashierRole})
+            Kasir: <strong className="text-slate-900">{cashierName}</strong>
+            {userEmail ? ` (${userEmail})` : ` (${cashierRole})`}
           </span>
         </div>
       </div>

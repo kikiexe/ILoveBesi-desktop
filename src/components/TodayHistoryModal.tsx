@@ -25,6 +25,7 @@ interface SaleRowWithRelations {
   remaining_debt: number;
   due_date: string | null;
   notes: string | null;
+  cashier_name?: string | null;
   customers: {
     code: string;
     name: string;
@@ -65,6 +66,7 @@ export default function TodayHistoryModal({
           id,
           invoice_number,
           sale_date,
+          cashier_name,
           payment_type,
           payment_status,
           subtotal_amount,
@@ -133,7 +135,7 @@ export default function TodayHistoryModal({
             address: sale.customers.address,
           }
         : null,
-      cashier_name: "Kasir Aktif",
+      cashier_name: sale.cashier_name || "Kasir",
       payment_type:
         sale.payment_type === "QRIS" || (sale.notes && sale.notes.includes("[QRIS]"))
           ? "QRIS"

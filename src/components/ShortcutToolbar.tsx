@@ -162,7 +162,7 @@ export default function ShortcutToolbar({
             onClick={onEsc}
             className="h-10 rounded border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
           >
-            [Esc] Batal / Keluar
+            [Esc] Tutup Kasir
           </button>
         </div>
       </div>
