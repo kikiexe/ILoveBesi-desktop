@@ -10,11 +10,106 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
   if (!data) return null;
 
   const isFaktur = data.mode === "FAKTUR";
+  const isStruk = data.mode === "STRUK";
+  const isSuratJalan = data.mode === "SURAT_JALAN";
 
   return (
     <div id="printable-root" className="hidden">
       {/* ========================================================= */}
-      {/* MODE 1: FAKTUR PENJUALAN (Lengkap dengan Harga & Status) */}
+      {/* MODE 1: STRUK KASIR THERMAL (Ukuran 58mm / 80mm)           */}
+      {/* ========================================================= */}
+      {isStruk && (
+        <div className="w-[72mm] p-2 font-mono text-[10px] leading-tight text-black mx-auto">
+          <div className="text-center pb-2 border-b border-dashed border-black">
+            <h1 className="text-sm font-bold uppercase tracking-wider">
+              ILuvBesi POS
+            </h1>
+            <p className="text-[9px]">Pusat Besi Hollow & Baja</p>
+            <p className="text-[9px]">Bukti Transaksi Kasir</p>
+          </div>
+
+          <div className="my-1.5 text-[9px] border-b border-dashed border-black pb-1.5 space-y-0.5">
+            <div className="flex justify-between">
+              <span>No Faktur:</span>
+              <span className="font-bold">{data.invoice_number}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Waktu:</span>
+              <span>{formatWibDateTime(data.sale_date)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Kasir:</span>
+              <span>{data.cashier_name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Pelanggan:</span>
+              <span>{data.customer ? data.customer.name : "UMUM"}</span>
+            </div>
+          </div>
+
+          <div className="my-1.5 border-b border-dashed border-black pb-1.5 space-y-1 text-[9px]">
+            {data.items.map((item, idx) => (
+              <div key={idx}>
+                <div className="font-bold truncate">{item.name}</div>
+                <div className="flex justify-between pl-1">
+                  <span>
+                    {item.qty} {item.unit || "BTG"} x {formatRupiah(item.unit_price)}
+                    {item.discount_pct > 0 && ` (-${item.discount_pct}%)`}
+                  </span>
+                  <span className="font-bold">{formatRupiah(item.subtotal)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="my-1.5 text-[9px] space-y-0.5">
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span>{formatRupiah(data.subtotal_amount)}</span>
+            </div>
+            {data.discount_amount > 0 && (
+              <div className="flex justify-between">
+                <span>Diskon:</span>
+                <span>-{formatRupiah(data.discount_amount)}</span>
+              </div>
+            )}
+            {data.tax_amount > 0 && (
+              <div className="flex justify-between">
+                <span>PPN:</span>
+                <span>+{formatRupiah(data.tax_amount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold border-t border-dashed border-black pt-1 text-[11px]">
+              <span>TOTAL:</span>
+              <span>{formatRupiah(data.grand_total)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Bayar ({data.payment_type}):</span>
+              <span>{formatRupiah(data.paid_amount)}</span>
+            </div>
+            {data.payment_type === "TUNAI" && (
+              <div className="flex justify-between">
+                <span>Kembalian:</span>
+                <span>{formatRupiah(Math.max(0, data.paid_amount - data.grand_total))}</span>
+              </div>
+            )}
+            {data.remaining_debt > 0 && (
+              <div className="flex justify-between font-bold text-red-700">
+                <span>Sisa Piutang:</span>
+                <span>{formatRupiah(data.remaining_debt)}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 pt-2 border-t border-dashed border-black text-center text-[8px] space-y-0.5">
+            <p>Barang yang dibeli tidak dapat ditukar/dikembalikan.</p>
+            <p className="font-bold text-[9px]">TERIMA KASIH ATAS KUNJUNGAN ANDA</p>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODE 2: FAKTUR PENJUALAN (Lengkap dengan Harga & Status) */}
       {/* ========================================================= */}
       {isFaktur && (
         <div className="p-4 font-mono text-[11px] leading-tight text-black">
@@ -23,7 +118,7 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
             <div className="flex justify-between items-start">
               <div>
                 <h1 className="text-base font-bold uppercase tracking-wider">
-                  ILoveBesi - Toko Besi Hollow
+                  ILuvBesi - Toko Besi Hollow
                 </h1>
                 <p className="text-[10px]">
                   Pusat Grosir & Eceran Besi Hollow Galvanis
@@ -138,6 +233,12 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
                   <span>- {formatRupiah(data.discount_amount)}</span>
                 </div>
               )}
+              {data.tax_amount > 0 && (
+                <div className="flex justify-between">
+                  <span>PPN (11%):</span>
+                  <span>+ {formatRupiah(data.tax_amount)}</span>
+                </div>
+              )}
               <div className="flex justify-between border-t border-black pt-1 font-bold text-xs">
                 <span>Grand Total:</span>
                 <span>{formatRupiah(data.grand_total)}</span>
@@ -182,16 +283,16 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
       )}
 
       {/* ========================================================= */}
-      {/* MODE 2: SURAT JALAN GUDANG (Fisik Saja, Tanpa Nilai Uang) */}
+      {/* MODE 3: SURAT JALAN GUDANG (Fisik Saja, Tanpa Nilai Uang) */}
       {/* ========================================================= */}
-      {!isFaktur && (
+      {isSuratJalan && (
         <div className="p-4 font-mono text-[11px] leading-tight text-black">
           {/* Header Surat Jalan */}
           <div className="border-b-2 border-black pb-2">
             <div className="flex justify-between items-start">
               <div>
                 <h1 className="text-base font-bold uppercase tracking-wider">
-                  ILoveBesi - Surat Jalan Gudang
+                  ILuvBesi - Surat Jalan Gudang
                 </h1>
                 <p className="text-[10px]">
                   Dokumen Muat & Bukti Pengeluaran Barang Fisik

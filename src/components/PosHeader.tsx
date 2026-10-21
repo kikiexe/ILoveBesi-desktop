@@ -38,7 +38,7 @@ export default function PosHeader({
       <div className="flex flex-col justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xl font-bold tracking-tight text-slate-900">
-            ILoveBesi
+            ILuvBesi
           </span>
           <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 border border-slate-200">
             Kasir POS

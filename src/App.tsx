@@ -23,6 +23,7 @@ import InstallmentModal from "./components/InstallmentModal";
 import PaymentModal from "./components/PaymentModal";
 import PrintableDocument from "./components/PrintableDocument";
 import CashierShiftModal from "./components/CashierShiftModal";
+import AppUpdateModal from "./components/AppUpdateModal";
 
 interface CurrentUser {
   id: string;
@@ -203,7 +204,7 @@ export default function App() {
         const newQty = existing.qty + item.qty;
 
         if (newQty > item.stock_qty) {
-          alert(`Stok tidak mencukupi! Maksimal tersedia: ${item.stock_qty} BTG`);
+          alert(`Stok tidak mencukupi! Maksimal tersedia: ${item.stock_qty} ${item.unit || "BTG"}`);
           return prev;
         }
 
@@ -577,6 +578,9 @@ export default function App() {
         }}
         onLogout={handleLogout}
       />
+
+      {/* Modal Notifikasi Pembaruan Aplikasi (Auto-Updater) */}
+      <AppUpdateModal />
 
       {/* Komponen Cetak Faktur & Surat Jalan (@media print) */}
       <PrintableDocument data={printDocumentData} />

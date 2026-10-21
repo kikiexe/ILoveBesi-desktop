@@ -196,9 +196,9 @@ export default function StockLookupModal({
                         <td className="px-3 py-2 font-semibold text-slate-900">
                           {p.name}
                         </td>
-                        <td className="px-3 py-2 text-slate-700">{p.dimension}</td>
+                        <td className="px-3 py-2 text-slate-700">{p.dimension || "-"}</td>
                         <td className="px-3 py-2 text-right font-mono tabular-nums text-slate-900">
-                          {formatThickness(Number(p.thickness_mm))}
+                          {Number(p.thickness_mm) > 0 ? formatThickness(Number(p.thickness_mm)) : "-"}
                         </td>
                         <td className="px-3 py-2 text-right font-mono tabular-nums">
                           <span

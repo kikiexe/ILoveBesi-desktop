@@ -122,7 +122,7 @@ const QuickItemInput = forwardRef<QuickItemInputHandle, QuickItemInputProps>(
       }
 
       if (qty <= 0) {
-        setInputError("Jumlah Qty minimal 1 BTG");
+        setInputError("Jumlah Qty minimal 1");
         qtyInputRef.current?.focus();
         return;
       }
@@ -130,7 +130,7 @@ const QuickItemInput = forwardRef<QuickItemInputHandle, QuickItemInputProps>(
       const availableStock = selectedProduct.stock_qty || 0;
       if (qty > availableStock) {
         setInputError(
-          `Stok tidak mencukupi (Tersedia: ${availableStock} BTG, Diminta: ${qty} BTG)`
+          `Stok tidak mencukupi (Tersedia: ${availableStock} ${selectedProduct.unit || "BTG"}, Diminta: ${qty})`
         );
         qtyInputRef.current?.focus();
         return;
@@ -227,7 +227,7 @@ const QuickItemInput = forwardRef<QuickItemInputHandle, QuickItemInputProps>(
                         Tebal: {formatThickness(Number(p.thickness_mm))}
                       </span>
                       <span className="tabular-nums font-semibold">
-                        Stok: {p.stock_qty} BTG
+                        Stok: {p.stock_qty} {p.unit || "BTG"}
                       </span>
                       <span className="tabular-nums font-bold text-blue-900">
                         {formatRupiah(Number(p.sell_price))}
@@ -245,7 +245,7 @@ const QuickItemInput = forwardRef<QuickItemInputHandle, QuickItemInputProps>(
               htmlFor="quick-qty"
               className="block text-[11px] font-bold text-slate-700"
             >
-              Qty (BTG)
+              Qty
             </label>
             <input
               id="quick-qty"

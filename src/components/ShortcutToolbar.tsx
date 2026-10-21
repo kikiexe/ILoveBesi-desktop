@@ -50,7 +50,7 @@ export default function ShortcutToolbar({
           <span>
             Total Fisik:{" "}
             <strong className="text-slate-900 font-bold tabular-nums">
-              {totalQty} BTG
+              {totalQty}
             </strong>
           </span>
         </div>

@@ -48,7 +48,7 @@ export default function InvoiceGrid({
             <th className="px-3 py-2.5">Nama Barang & Ukuran</th>
             <th className="w-24 px-3 py-2.5 text-right">Tebal</th>
             <th className="w-24 px-3 py-2.5 text-right">Stok</th>
-            <th className="w-28 px-3 py-2.5 text-right">Qty (BTG)</th>
+            <th className="w-28 px-3 py-2.5 text-right">Qty</th>
             <th className="w-32 px-3 py-2.5 text-right">Harga Satuan</th>
             <th className="w-28 px-3 py-2.5 text-right">Diskon (%)</th>
             <th className="w-36 px-3 py-2.5 text-right">Subtotal</th>
@@ -77,12 +77,14 @@ export default function InvoiceGrid({
                 </td>
                 <td className="px-3 py-2">
                   <div className="font-bold text-slate-900">{item.name}</div>
-                  <div className="text-[11px] text-slate-700">
-                    Dimensi: {item.dimension}
-                  </div>
+                  {item.dimension && item.dimension !== "-" && (
+                    <div className="text-[11px] text-slate-700">
+                      Dimensi: {item.dimension}
+                    </div>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-right font-mono tabular-nums text-slate-900">
-                  {formatThickness(item.thickness_mm)}
+                  {item.thickness_mm > 0 ? formatThickness(item.thickness_mm) : "-"}
                 </td>
                 <td className="px-3 py-2 text-right font-mono tabular-nums text-slate-700">
                   {item.stock_qty} {item.unit}

@@ -164,6 +164,7 @@ export type Database = {
           created_at: string
           dimension: string
           id: string
+          include_ppn?: boolean
           is_active: boolean
           name: string
           owner_id: string
@@ -179,6 +180,7 @@ export type Database = {
           created_at?: string
           dimension: string
           id?: string
+          include_ppn?: boolean
           is_active?: boolean
           name: string
           owner_id?: string
@@ -194,6 +196,7 @@ export type Database = {
           created_at?: string
           dimension?: string
           id?: string
+          include_ppn?: boolean
           is_active?: boolean
           name?: string
           owner_id?: string
@@ -554,6 +557,7 @@ export type Database = {
         Row: {
           dimension: string | null
           id: string | null
+          include_ppn: boolean | null
           is_active: boolean | null
           name: string | null
           owner_id: string | null
@@ -567,6 +571,7 @@ export type Database = {
         Insert: {
           dimension?: string | null
           id?: string | null
+          include_ppn?: boolean | null
           is_active?: boolean | null
           name?: string | null
           owner_id?: string | null
@@ -580,6 +585,7 @@ export type Database = {
         Update: {
           dimension?: string | null
           id?: string | null
+          include_ppn?: boolean | null
           is_active?: boolean | null
           name?: string | null
           owner_id?: string | null

@@ -43,7 +43,7 @@ export type ActiveModal =
   | "CASHIER_SHIFT_OPEN"
   | "CASHIER_SHIFT_CLOSE";
 
-export type PrintMode = "FAKTUR" | "SURAT_JALAN";
+export type PrintMode = "FAKTUR" | "SURAT_JALAN" | "STRUK";
 
 export interface PrintDocumentData {
   mode: PrintMode;
@@ -63,6 +63,7 @@ export interface PrintDocumentData {
     name: string;
     dimension: string;
     thickness_mm: number;
+    unit?: string;
     qty: number;
     unit_price: number;
     discount_pct: number;

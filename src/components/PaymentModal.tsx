@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { formatRupiah } from "../utils/currency";
 import { getDefaultDueDateString } from "../utils/date";
 import { createSaleSchema } from "../schemas/sale.schema";
+import { generateReceiptPdf, generateInvoicePdf } from "../utils/pdfReceipt";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -36,7 +37,10 @@ interface SavedSaleSnapshot {
   customer: Customer | null;
   subtotalAmount: number;
   discountAmount: number;
+  taxAmount: number;
 }
+
+export type PpnOption = "NON_PPN" | "INCLUDE_PPN" | "EXCLUDE_PPN";
 
 export default function PaymentModal({
   isOpen,
@@ -50,6 +54,7 @@ export default function PaymentModal({
   onTriggerPrint,
 }: PaymentModalProps) {
   const [paymentType, setPaymentType] = useState<"TUNAI" | "QRIS" | "KREDIT">("TUNAI");
+  const [ppnOption, setPpnOption] = useState<PpnOption>("NON_PPN");
   const [qrisRef, setQrisRef] = useState<string>("");
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [cashReceived, setCashReceived] = useState<number>(0);
@@ -62,8 +67,16 @@ export default function PaymentModal({
   const [savedSale, setSavedSale] = useState<SavedSaleResult | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState<SavedSaleSnapshot | null>(null);
 
-  // Recalculate grand total
-  const grandTotal = Math.max(0, initialSubtotal - discountAmount);
+  // Recalculate totals with PPN handling
+  const dppAmount = Math.max(0, initialSubtotal - discountAmount);
+  const taxAmount =
+    ppnOption === "INCLUDE_PPN"
+      ? Math.round(dppAmount - dppAmount / 1.11)
+      : ppnOption === "EXCLUDE_PPN"
+      ? Math.round(dppAmount * 0.11)
+      : 0;
+
+  const grandTotal = ppnOption === "EXCLUDE_PPN" ? dppAmount + taxAmount : dppAmount;
   const changeAmount = Math.max(0, cashReceived - grandTotal);
   const remainingDebt = Math.max(0, grandTotal - downPayment);
 
@@ -71,6 +84,7 @@ export default function PaymentModal({
   useEffect(() => {
     if (isOpen) {
       setPaymentType("TUNAI");
+      setPpnOption("NON_PPN");
       setQrisRef("");
       setDiscountAmount(0);
       setCashReceived(initialSubtotal);
@@ -81,7 +95,14 @@ export default function PaymentModal({
       setSavedSale(null);
       setSavedSnapshot(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialSubtotal]);
+
+  // Keep cashReceived updated when total changes if using exact cash
+  useEffect(() => {
+    if (paymentType === "TUNAI") {
+      setCashReceived(grandTotal);
+    }
+  }, [grandTotal, paymentType]);
 
   if (!isOpen) return null;
 
@@ -137,7 +158,7 @@ export default function PaymentModal({
       payment_type: paymentType,
       customer_id: customer?.id || undefined,
       discount_amount: discountAmount,
-      tax_amount: 0,
+      tax_amount: taxAmount,
       paid_amount: paymentType === "KREDIT" ? downPayment : grandTotal,
       due_date: paymentType === "KREDIT" ? dueDate : undefined,
       notes: effectiveNotes || undefined,
@@ -156,7 +177,7 @@ export default function PaymentModal({
         p_payment_type: paymentType,
         p_customer_id: customer?.id || undefined,
         p_discount_amount: discountAmount,
-        p_tax_amount: 0,
+        p_tax_amount: taxAmount,
         p_paid_amount: paymentType === "KREDIT" ? downPayment : grandTotal,
         p_due_date: paymentType === "KREDIT" ? dueDate : undefined,
         p_notes: effectiveNotes || undefined,
@@ -173,7 +194,7 @@ export default function PaymentModal({
             p_payment_type: "TUNAI",
             p_customer_id: customer?.id || undefined,
             p_discount_amount: discountAmount,
-            p_tax_amount: 0,
+            p_tax_amount: taxAmount,
             p_paid_amount: grandTotal,
             p_due_date: undefined,
             p_notes: fallbackNotes || undefined,
@@ -198,6 +219,7 @@ export default function PaymentModal({
         customer,
         subtotalAmount: initialSubtotal,
         discountAmount,
+        taxAmount,
       });
 
       setSavedSale(res);
@@ -211,10 +233,10 @@ export default function PaymentModal({
     }
   };
 
-  const handlePrintDocument = (mode: "FAKTUR" | "SURAT_JALAN") => {
-    if (!savedSnapshot) return;
+  const getDocData = (mode: "FAKTUR" | "SURAT_JALAN" | "STRUK"): PrintDocumentData | null => {
+    if (!savedSnapshot) return null;
 
-    const docData: PrintDocumentData = {
+    return {
       mode,
       invoice_number: savedSnapshot.result.invoice_number,
       sale_date: savedSnapshot.result.sale_date,
@@ -234,6 +256,7 @@ export default function PaymentModal({
         name: it.name,
         dimension: it.dimension,
         thickness_mm: it.thickness_mm,
+        unit: it.unit,
         qty: it.qty,
         unit_price: it.unit_price,
         discount_pct: it.discount_pct,
@@ -241,15 +264,28 @@ export default function PaymentModal({
       })),
       subtotal_amount: savedSnapshot.subtotalAmount,
       discount_amount: savedSnapshot.discountAmount,
-      tax_amount: 0,
+      tax_amount: savedSnapshot.taxAmount,
       grand_total: savedSnapshot.result.grand_total,
       paid_amount: savedSnapshot.result.paid_amount,
       remaining_debt: savedSnapshot.result.remaining_debt,
       due_date: savedSnapshot.result.due_date,
       notes: savedSnapshot.result.notes,
     };
+  };
 
-    onTriggerPrint(docData);
+  const handlePrintDocument = (mode: "FAKTUR" | "SURAT_JALAN" | "STRUK") => {
+    const docData = getDocData(mode);
+    if (docData) onTriggerPrint(docData);
+  };
+
+  const handleDownloadReceiptPdf = () => {
+    const docData = getDocData("STRUK");
+    if (docData) generateReceiptPdf(docData);
+  };
+
+  const handleDownloadInvoicePdf = () => {
+    const docData = getDocData("FAKTUR");
+    if (docData) generateInvoicePdf(docData);
   };
 
   return (
@@ -332,29 +368,53 @@ export default function PaymentModal({
               </div>
             </div>
 
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => handlePrintDocument("STRUK")}
+                className="h-10 rounded bg-blue-900 px-4 text-xs font-bold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+              >
+                Cetak Struk (Printer)
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadReceiptPdf}
+                className="h-10 rounded border border-blue-900 bg-blue-50 px-4 text-xs font-bold text-blue-900 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+              >
+                Unduh Struk (PDF)
+              </button>
+
               <button
                 type="button"
                 onClick={() => handlePrintDocument("FAKTUR")}
-                className="h-11 w-full sm:w-auto rounded bg-blue-900 px-5 text-xs font-bold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+                className="h-10 rounded border border-slate-300 bg-white px-4 text-xs font-bold text-slate-800 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
               >
-                Cetak Faktur Penjualan
+                Cetak Faktur A4
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadInvoicePdf}
+                className="h-10 rounded border border-slate-300 bg-white px-4 text-xs font-bold text-slate-800 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+              >
+                Unduh Faktur (PDF)
               </button>
 
               <button
                 type="button"
                 onClick={() => handlePrintDocument("SURAT_JALAN")}
-                className="h-11 w-full sm:w-auto rounded border border-slate-300 bg-white px-5 text-xs font-bold text-slate-900 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+                className="h-10 rounded border border-slate-300 bg-white px-4 text-xs font-bold text-slate-800 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
               >
-                Cetak Surat Jalan Gudang
+                Surat Jalan
               </button>
 
               <button
                 type="button"
                 onClick={onClose}
-                className="h-11 w-full sm:w-auto rounded bg-slate-800 px-5 text-xs font-bold text-white hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+                className="h-10 rounded bg-slate-800 px-4 text-xs font-bold text-white hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
               >
-                Transaksi Baru [Enter / Esc]
+                Transaksi Baru [Esc]
               </button>
             </div>
           </div>
@@ -459,6 +519,61 @@ export default function PaymentModal({
                   className="mt-1 h-10 w-full rounded border border-slate-300 bg-white px-2 text-right font-mono text-xs font-bold tabular-nums text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
                 />
               </div>
+            </div>
+
+            {/* Pengaturan Perlakuan PPN (Include / Exclude / Non-PPN) */}
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-900">Perlakuan Pajak PPN:</span>
+                <span className="text-[11px] font-mono text-slate-600">Tarif 11%</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPpnOption("NON_PPN")}
+                  className={`h-9 rounded border text-xs font-semibold ${
+                    ppnOption === "NON_PPN"
+                      ? "border-blue-900 bg-blue-100/80 text-blue-900 font-bold"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  Non-PPN (0%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPpnOption("INCLUDE_PPN")}
+                  className={`h-9 rounded border text-xs font-semibold ${
+                    ppnOption === "INCLUDE_PPN"
+                      ? "border-blue-900 bg-blue-100/80 text-blue-900 font-bold"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  Include PPN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPpnOption("EXCLUDE_PPN")}
+                  className={`h-9 rounded border text-xs font-semibold ${
+                    ppnOption === "EXCLUDE_PPN"
+                      ? "border-blue-900 bg-blue-100/80 text-blue-900 font-bold"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  Exclude PPN (+11%)
+                </button>
+              </div>
+              {ppnOption === "INCLUDE_PPN" && (
+                <div className="mt-2 text-[11px] text-slate-600 flex justify-between">
+                  <span>DPP (Dasar Pengenaan Pajak): {formatRupiah(dppAmount - taxAmount)}</span>
+                  <span className="font-semibold text-blue-900">PPN (11% Termasuk): {formatRupiah(taxAmount)}</span>
+                </div>
+              )}
+              {ppnOption === "EXCLUDE_PPN" && (
+                <div className="mt-2 text-[11px] text-slate-600 flex justify-between">
+                  <span>Subtotal Dasar: {formatRupiah(dppAmount)}</span>
+                  <span className="font-semibold text-blue-900">+ PPN (11% Tambahan): {formatRupiah(taxAmount)}</span>
+                </div>
+              )}
             </div>
 
             {/* Total Tagihan Bersih */}

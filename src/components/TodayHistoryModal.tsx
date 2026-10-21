@@ -313,10 +313,17 @@ export default function TodayHistoryModal({
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
+                            onClick={() => handlePrint(s, "STRUK")}
+                            className="h-10 rounded bg-blue-900 px-2.5 text-xs font-bold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+                          >
+                            Struk
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handlePrint(s, "FAKTUR")}
                             className="h-10 rounded border border-slate-300 bg-white px-2.5 text-xs font-bold text-blue-900 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
                           >
-                            Cetak Faktur
+                            Faktur
                           </button>
                           <button
                             type="button"
