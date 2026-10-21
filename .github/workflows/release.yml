@@ -28,26 +28,31 @@ jobs:
               : (context.payload.inputs?.tag || 'v1.0.0');
 
             try {
-              const { data } = await github.rest.repos.getReleaseByTag({
+              const { data: releases } = await github.rest.repos.listReleases({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                tag: tag,
+                per_page: 20,
               });
-              console.log('Menggunakan rilis yang sudah ada: ' + data.id);
-              return data.id;
+              const existing = releases.find(r => r.tag_name === tag);
+              if (existing) {
+                console.log('Menggunakan rilis yang sudah ada: ' + existing.id);
+                return existing.id;
+              }
             } catch (err) {
-              console.log('Membuat rilis baru untuk tag ' + tag);
-              const { data } = await github.rest.repos.createRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag_name: tag,
-                name: 'ILoveBesi POS Desktop ' + tag,
-                body: 'Rilis otomatis lintas platform aplikasi kasir desktop ILoveBesi untuk Linux (.rpm, .deb, .AppImage), Windows (.exe NSIS, .msi), dan macOS (.dmg Apple Silicon & Intel).',
-                draft: true,
-                prerelease: false,
-              });
-              return data.id;
+              console.log('Pemeriksaan daftar rilis mengalami kendala: ' + err);
             }
+
+            console.log('Membuat rilis baru untuk tag ' + tag);
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: 'ILoveBesi POS Desktop ' + tag,
+              body: 'Rilis otomatis lintas platform aplikasi kasir desktop ILoveBesi untuk Linux (.rpm, .deb, .AppImage), Windows (.exe NSIS, .msi), dan macOS (.dmg Apple Silicon & Intel).',
+              draft: true,
+              prerelease: false,
+            });
+            return data.id;
 
   release:
     name: Build and Upload (${{ matrix.name }})
