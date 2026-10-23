@@ -317,7 +317,10 @@ export default function App() {
   };
 
   // Print execution
-  const handleTriggerPrint = async (docData: PrintDocumentData) => {
+  const handleTriggerPrint = async (
+    docData: PrintDocumentData,
+    isTestPrint = false
+  ): Promise<{ success: boolean; message: string }> => {
     const effectiveSettings = docData.settings || posSettings;
     const resolvedData: PrintDocumentData = {
       ...docData,
@@ -337,18 +340,45 @@ export default function App() {
             ? `${effectiveSettings.printerIpAddress}:${effectiveSettings.printerPort}`
             : effectiveSettings.printerTargetName;
 
-        if (targetPath && targetPath.trim()) {
-          await invoke("print_raw_thermal", {
-            targetType,
-            targetPath: targetPath.trim(),
-            content: textPayload,
-            autoCut: Boolean(effectiveSettings.autoCutPaper),
-            openDrawer: Boolean(effectiveSettings.openCashDrawer),
-          });
-          return;
+        if (!targetPath || !targetPath.trim()) {
+          const errMsg = "Alamat IP printer LAN atau nama port serial belum diisi.";
+          if (isTestPrint) {
+            return { success: false, message: errMsg };
+          }
+          throw new Error(errMsg);
         }
+
+        // Non-blocking promise race with 3500ms timeout
+        const printPromise = invoke<string>("print_raw_thermal", {
+          targetType,
+          targetPath: targetPath.trim(),
+          content: textPayload,
+          autoCut: Boolean(effectiveSettings.autoCutPaper),
+          openDrawer: Boolean(effectiveSettings.openCashDrawer),
+        });
+
+        const timeoutPromise = new Promise<string>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Timeout komunikasi printer (> 3.5 detik).")),
+            3500
+          )
+        );
+
+        const responseMsg = await Promise.race([printPromise, timeoutPromise]);
+        return {
+          success: true,
+          message: responseMsg || "Berhasil mengirim sinyal cetak langsung ke printer thermal.",
+        };
       } catch (err: unknown) {
-        console.warn("Direct thermal print gagal, fallback ke print dialog OS:", err);
+        const errorDetail = err instanceof Error ? err.message : String(err);
+        console.warn("Direct thermal print gagal:", errorDetail);
+        if (isTestPrint) {
+          return {
+            success: false,
+            message: `Gagal cetak direct: ${errorDetail}`,
+          };
+        }
+        // If normal sale checkout, fallback gracefully to OS print dialog
       }
     }
 
@@ -356,44 +386,54 @@ export default function App() {
     setTimeout(() => {
       window.print();
     }, 150);
+
+    return {
+      success: true,
+      message: "Dialog cetak sistem operasi telah dibuka.",
+    };
   };
 
-  const handleTestPrint = (testSettings: PosSettings) => {
-    handleTriggerPrint({
-      mode: "STRUK",
-      invoice_number: `TEST-${Date.now().toString().slice(-4)}`,
-      sale_date: new Date().toISOString(),
-      customer: {
-        code: "TEST-01",
-        name: "UJI KONEKSI PRINTER",
-        phone: "-",
-        address: "-",
-      },
-      cashier_name: activeShift?.cashier_name || currentUser?.fullName || "Admin Kasir",
-      payment_type: "TUNAI",
-      payment_status: "LUNAS",
-      items: [
-        {
-          sku: "TEST-PRN",
-          name: "Uji Koneksi Perangkat Kasir",
-          dimension: testSettings.paperWidth,
-          thickness_mm: 1.0,
-          qty: 1,
-          unit_price: 0,
-          discount_pct: 0,
-          subtotal: 0,
-          include_ppn: false,
+  const handleTestPrint = async (
+    testSettings: PosSettings
+  ): Promise<{ success: boolean; message: string }> => {
+    return await handleTriggerPrint(
+      {
+        mode: "STRUK",
+        invoice_number: `TEST-${Date.now().toString().slice(-4)}`,
+        sale_date: new Date().toISOString(),
+        customer: {
+          code: "TEST-01",
+          name: "UJI KONEKSI PRINTER",
+          phone: "-",
+          address: "-",
         },
-      ],
-      subtotal_amount: 0,
-      discount_amount: 0,
-      tax_amount: 0,
-      grand_total: 0,
-      paid_amount: 0,
-      remaining_debt: 0,
-      notes: `Koneksi: ${testSettings.printerConnection} | Target: ${testSettings.printerConnection === "NETWORK_LAN" ? `${testSettings.printerIpAddress}:${testSettings.printerPort}` : testSettings.printerTargetName} | Kertas: ${testSettings.paperWidth} | Salinan: ${testSettings.printCopies}x | AutoCut: ${testSettings.autoCutPaper ? "YA" : "TIDAK"} | Laci: ${testSettings.openCashDrawer ? "YA" : "TIDAK"}`,
-      settings: testSettings,
-    });
+        cashier_name: activeShift?.cashier_name || currentUser?.fullName || "Admin Kasir",
+        payment_type: "TUNAI",
+        payment_status: "LUNAS",
+        items: [
+          {
+            sku: "TEST-PRN",
+            name: "Uji Koneksi Perangkat Kasir",
+            dimension: testSettings.paperWidth,
+            thickness_mm: 1.0,
+            qty: 1,
+            unit_price: 0,
+            discount_pct: 0,
+            subtotal: 0,
+            include_ppn: false,
+          },
+        ],
+        subtotal_amount: 0,
+        discount_amount: 0,
+        tax_amount: 0,
+        grand_total: 0,
+        paid_amount: 0,
+        remaining_debt: 0,
+        notes: `Koneksi: ${testSettings.printerConnection} | Target: ${testSettings.printerConnection === "NETWORK_LAN" ? `${testSettings.printerIpAddress}:${testSettings.printerPort}` : testSettings.printerTargetName} | Kertas: ${testSettings.paperWidth} | Salinan: ${testSettings.printCopies}x | AutoCut: ${testSettings.autoCutPaper ? "YA" : "TIDAK"} | Laci: ${testSettings.openCashDrawer ? "YA" : "TIDAK"}`,
+        settings: testSettings,
+      },
+      true
+    );
   };
 
   // App exit / logout

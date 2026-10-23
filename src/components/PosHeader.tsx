@@ -53,7 +53,7 @@ export default function PosHeader({
             className="rounded bg-blue-50 px-2 py-0.5 text-[11px] font-mono font-bold text-blue-900 border border-blue-200"
             title="Versi Rilis Aplikasi Desktop POS"
           >
-            v{appVersion || "1.1.3"}
+            v{appVersion || "1.1.4"}
           </span>
           <span className="text-xs font-mono font-medium text-slate-700">
             No: Otomatis saat simpan

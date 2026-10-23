@@ -7,7 +7,7 @@ interface SettingsModalProps {
   settings: PosSettings;
   appVersion?: string;
   onSaveSettings: (newSettings: PosSettings) => void;
-  onTestPrint?: (settings: PosSettings) => void;
+  onTestPrint?: (settings: PosSettings) => Promise<{ success: boolean; message: string }>;
 }
 
 type SettingsTab = "store" | "bank" | "printer";
@@ -23,13 +23,18 @@ export default function SettingsModal({
   const [activeTab, setActiveTab] = useState<SettingsTab>("store");
   const [form, setForm] = useState<PosSettings>(settings);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [testPrintTriggered, setTestPrintTriggered] = useState(false);
+  const [isTestingPrint, setIsTestingPrint] = useState(false);
+  const [testPrintFeedback, setTestPrintFeedback] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setForm(settings);
       setSaveSuccess(false);
-      setTestPrintTriggered(false);
+      setIsTestingPrint(false);
+      setTestPrintFeedback(null);
       setActiveTab("store");
     }
   }, [isOpen, settings]);
@@ -45,11 +50,21 @@ export default function SettingsModal({
     }, 600);
   };
 
-  const handleTriggerTestPrint = () => {
-    if (onTestPrint) {
-      setTestPrintTriggered(true);
-      onTestPrint(form);
-      setTimeout(() => setTestPrintTriggered(false), 3000);
+  const handleTriggerTestPrint = async () => {
+    if (!onTestPrint || isTestingPrint) return;
+    setIsTestingPrint(true);
+    setTestPrintFeedback(null);
+    try {
+      const res = await onTestPrint(form);
+      setTestPrintFeedback(res);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setTestPrintFeedback({
+        success: false,
+        message: `Gagal uji cetak: ${msg}`,
+      });
+    } finally {
+      setIsTestingPrint(false);
     }
   };
 
@@ -83,7 +98,7 @@ export default function SettingsModal({
                   [F12] Pengaturan Toko & Kasir POS
                 </h2>
                 <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-mono font-bold text-blue-900 border border-blue-200">
-                  v{appVersion || "1.1.3"}
+                  v{appVersion || "1.1.4"}
                 </span>
               </div>
               <p className="text-xs text-slate-700">
@@ -146,9 +161,29 @@ export default function SettingsModal({
               </div>
             )}
 
-            {testPrintTriggered && (
-              <div className="rounded border border-blue-300 bg-blue-50 p-3 text-xs font-bold text-blue-900">
-                Sinyal uji cetak dikirim ke printer kasir. Silakan periksa kertas keluar.
+            {isTestingPrint && (
+              <div className="rounded border border-blue-300 bg-blue-50 p-3 text-xs font-bold text-blue-900 flex items-center gap-2">
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-900 border-t-transparent" />
+                <span>Sedang mengirim perintah uji cetak ke perangkat printer...</span>
+              </div>
+            )}
+
+            {testPrintFeedback && (
+              <div
+                className={`rounded border p-3 text-xs font-bold flex items-start justify-between gap-2 ${
+                  testPrintFeedback.success
+                    ? "border-green-300 bg-green-50 text-green-900"
+                    : "border-red-300 bg-red-50 text-red-900"
+                }`}
+              >
+                <div className="flex-1">{testPrintFeedback.message}</div>
+                <button
+                  type="button"
+                  onClick={() => setTestPrintFeedback(null)}
+                  className="text-xs font-semibold underline opacity-80 hover:opacity-100"
+                >
+                  Tutup
+                </button>
               </div>
             )}
 
@@ -560,10 +595,14 @@ export default function SettingsModal({
               {activeTab === "printer" && (
                 <button
                   type="button"
+                  disabled={isTestingPrint}
                   onClick={handleTriggerTestPrint}
-                  className="h-10 rounded border border-blue-900 bg-blue-50 px-3.5 text-xs font-bold text-blue-900 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+                  className="h-10 rounded border border-blue-900 bg-blue-50 px-3.5 text-xs font-bold text-blue-900 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900 flex items-center gap-2"
                 >
-                  Uji Cetak Printer (Test Print)
+                  {isTestingPrint && (
+                    <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-900 border-t-transparent" />
+                  )}
+                  <span>{isTestingPrint ? "Menguji Printer..." : "Uji Cetak Printer (Test Print)"}</span>
                 </button>
               )}
             </div>
