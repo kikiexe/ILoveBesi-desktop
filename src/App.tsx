@@ -24,6 +24,9 @@ import PaymentModal from "./components/PaymentModal";
 import PrintableDocument from "./components/PrintableDocument";
 import CashierShiftModal from "./components/CashierShiftModal";
 import AppUpdateModal from "./components/AppUpdateModal";
+import SettingsModal from "./components/SettingsModal";
+import { getPosSettings, savePosSettings } from "./utils/settingsStorage";
+import type { PosSettings } from "./types/settings.types";
 
 interface CurrentUser {
   id: string;
@@ -50,6 +53,9 @@ export default function App() {
   const [selectedRowIndex, setSelectedRowIndex] = useState<number>(0);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+
+  // Settings state
+  const [posSettings, setPosSettings] = useState<PosSettings>(getPosSettings);
 
   // Print document state
   const [printDocumentData, setPrintDocumentData] = useState<PrintDocumentData | null>(null);
@@ -300,7 +306,10 @@ export default function App() {
 
   // Print execution
   const handleTriggerPrint = (docData: PrintDocumentData) => {
-    setPrintDocumentData(docData);
+    setPrintDocumentData({
+      ...docData,
+      settings: posSettings,
+    });
     // Allow DOM to update printable area before print dialog
     setTimeout(() => {
       window.print();
@@ -358,6 +367,10 @@ export default function App() {
       if (activeModal) return;
       setActiveModal("INSTALLMENT");
     },
+    onF12: () => {
+      if (activeModal) return;
+      setActiveModal("SETTINGS");
+    },
     onEscape: () => {
       if (activeModal) {
         if (activeModal === "CASHIER_SHIFT_OPEN") return;
@@ -394,7 +407,9 @@ export default function App() {
         userEmail={currentUser.email}
         selectedCustomer={selectedCustomer}
         grandTotal={grandTotal}
+        storeName={posSettings.storeName}
         onOpenCustomerModal={() => setActiveModal("CUSTOMER")}
+        onOpenSettings={() => setActiveModal("SETTINGS")}
       />
 
       {/* 2. Bar Input Cepat Cari Barang */}
@@ -439,6 +454,7 @@ export default function App() {
         onF9={() => setActiveModal("STOCK_LOOKUP")}
         onF10={() => setActiveModal("TODAY_HISTORY")}
         onF11={() => setActiveModal("INSTALLMENT")}
+        onF12={() => setActiveModal("SETTINGS")}
         onEsc={() => setActiveModal("CASHIER_SHIFT_CLOSE")}
       />
 
@@ -522,6 +538,7 @@ export default function App() {
         customer={selectedCustomer}
         cashierName={activeShift?.cashier_name || currentUser.fullName}
         initialSubtotal={subtotalAmount}
+        settings={posSettings}
         onOpenCustomerModal={() => setActiveModal("CUSTOMER")}
         onSaleCompleted={() => {
           setCartItems([]);
@@ -582,6 +599,20 @@ export default function App() {
 
       {/* Modal Notifikasi Pembaruan Aplikasi (Auto-Updater) */}
       <AppUpdateModal />
+
+      {/* Modal [F12] Pengaturan Toko & Kasir POS */}
+      <SettingsModal
+        isOpen={activeModal === "SETTINGS"}
+        onClose={() => {
+          setActiveModal(null);
+          quickInputRef.current?.focusSearch();
+        }}
+        settings={posSettings}
+        onSaveSettings={(newSettings) => {
+          savePosSettings(newSettings);
+          setPosSettings(newSettings);
+        }}
+      />
 
       {/* Komponen Cetak Faktur & Surat Jalan (@media print) */}
       <PrintableDocument data={printDocumentData} />

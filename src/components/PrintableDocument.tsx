@@ -13,19 +13,32 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
   const isStruk = data.mode === "STRUK";
   const isSuratJalan = data.mode === "SURAT_JALAN";
 
+  const is58mm = data.settings?.paperWidth === "58mm";
+  const storeName = data.settings?.storeName || "ILuvBesi POS";
+  const storeSubtitle = data.settings?.storeSubtitle || "Pusat Besi Hollow & Baja";
+  const storeAddress = data.settings?.storeAddress || "";
+  const storePhone = data.settings?.storePhone || "";
+  const footerNotes = data.settings?.footerNotes || "Barang yang dibeli tidak dapat ditukar/dikembalikan.";
+  const footerGreeting = data.settings?.footerGreeting || "TERIMA KASIH ATAS KUNJUNGAN ANDA";
+  const bankName = data.settings?.bankName || "BCA";
+  const bankAccountNumber = data.settings?.bankAccountNumber || "";
+  const bankAccountName = data.settings?.bankAccountName || "";
+
   return (
     <div id="printable-root" className="hidden">
       {/* ========================================================= */}
       {/* MODE 1: STRUK KASIR THERMAL (Ukuran 58mm / 80mm)           */}
       {/* ========================================================= */}
       {isStruk && (
-        <div className="w-[72mm] p-2 font-mono text-[10px] leading-tight text-black mx-auto">
+        <div className={`${is58mm ? "w-[48mm]" : "w-[72mm]"} p-2 font-mono text-[10px] leading-tight text-black mx-auto`}>
           <div className="text-center pb-2 border-b border-dashed border-black">
             <h1 className="text-sm font-bold uppercase tracking-wider">
-              ILuvBesi POS
+              {storeName}
             </h1>
-            <p className="text-[9px]">Pusat Besi Hollow & Baja</p>
-            <p className="text-[9px]">Bukti Transaksi Kasir</p>
+            <p className="text-[9px]">{storeSubtitle}</p>
+            {storeAddress && <p className="text-[8px]">{storeAddress}</p>}
+            {storePhone && <p className="text-[8px]">Telp/WA: {storePhone}</p>}
+            <p className="text-[8px] text-slate-600 mt-0.5">Bukti Transaksi Kasir</p>
           </div>
 
           <div className="my-1.5 text-[9px] border-b border-dashed border-black pb-1.5 space-y-0.5">
@@ -102,8 +115,8 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
           </div>
 
           <div className="mt-3 pt-2 border-t border-dashed border-black text-center text-[8px] space-y-0.5">
-            <p>Barang yang dibeli tidak dapat ditukar/dikembalikan.</p>
-            <p className="font-bold text-[9px]">TERIMA KASIH ATAS KUNJUNGAN ANDA</p>
+            <p>{footerNotes}</p>
+            <p className="font-bold text-[9px]">{footerGreeting}</p>
           </div>
         </div>
       )}
@@ -118,12 +131,14 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
             <div className="flex justify-between items-start">
               <div>
                 <h1 className="text-base font-bold uppercase tracking-wider">
-                  ILuvBesi - Toko Besi Hollow
+                  {storeName}
                 </h1>
                 <p className="text-[10px]">
-                  Pusat Grosir & Eceran Besi Hollow Galvanis
+                  {storeSubtitle}
                 </p>
-                <p className="text-[10px]">
+                {storeAddress && <p className="text-[9px]">{storeAddress}</p>}
+                {storePhone && <p className="text-[9px]">Telp/WA: {storePhone}</p>}
+                <p className="text-[9px] text-slate-700">
                   Faktur Penjualan Resmi / Bukti Transaksi Kasir
                 </p>
               </div>
@@ -266,8 +281,13 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
               </p>
             </div>
 
-            <div className="w-48 text-[9px] text-left">
-              <p>* Barang yang sudah dibeli dan keluar dari gudang tidak dapat ditukar/dikembalikan tanpa persetujuan toko.</p>
+            <div className="w-56 text-[9px] text-left space-y-0.5">
+              {bankAccountNumber && (
+                <p className="font-semibold text-slate-900">
+                  Transfer: Bank {bankName} {bankAccountNumber} {bankAccountName && `a/n ${bankAccountName}`}
+                </p>
+              )}
+              <p>* {footerNotes}</p>
               <p>* Nota ini adalah bukti pembayaran yang sah.</p>
             </div>
 
@@ -292,7 +312,7 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
             <div className="flex justify-between items-start">
               <div>
                 <h1 className="text-base font-bold uppercase tracking-wider">
-                  ILuvBesi - Surat Jalan Gudang
+                  {storeName} - Surat Jalan Gudang
                 </h1>
                 <p className="text-[10px]">
                   Dokumen Muat & Bukti Pengeluaran Barang Fisik

@@ -15,6 +15,7 @@ interface ShortcutToolbarProps {
   onF9: () => void;
   onF10: () => void;
   onF11: () => void;
+  onF12?: () => void;
   onEsc: () => void;
 }
 
@@ -33,6 +34,7 @@ export default function ShortcutToolbar({
   onF9,
   onF10,
   onF11,
+  onF12,
   onEsc,
 }: ShortcutToolbarProps) {
   return (
@@ -146,6 +148,16 @@ export default function ShortcutToolbar({
           >
             [F11] Terima Cicilan
           </button>
+
+          {onF12 && (
+            <button
+              type="button"
+              onClick={onF12}
+              className="h-10 rounded border border-slate-300 bg-white px-3 text-xs font-bold text-slate-800 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+            >
+              [F12] Pengaturan
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">

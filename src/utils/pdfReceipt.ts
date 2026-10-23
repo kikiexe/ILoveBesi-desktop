@@ -16,16 +16,32 @@ export function generateReceiptPdf(data: PrintDocumentData) {
   const right = 75;
   let y = 8;
 
+  const storeName = data.settings?.storeName || "ILuvBesi POS";
+  const storeSubtitle = data.settings?.storeSubtitle || "Pusat Besi Hollow & Material Baja";
+  const storeAddress = data.settings?.storeAddress;
+  const storePhone = data.settings?.storePhone;
+
   // Header
   doc.setFont("courier", "bold");
   doc.setFontSize(13);
-  doc.text("ILuvBesi POS", 40, y, { align: "center" });
+  doc.text(storeName, 40, y, { align: "center" });
   y += 4.5;
 
   doc.setFont("courier", "normal");
   doc.setFontSize(8);
-  doc.text("Pusat Besi Hollow & Material Baja", 40, y, { align: "center" });
-  y += 3.5;
+  if (storeSubtitle) {
+    doc.text(storeSubtitle, 40, y, { align: "center" });
+    y += 3.5;
+  }
+  if (storeAddress) {
+    const splitAddr = doc.splitTextToSize(storeAddress, 70);
+    doc.text(splitAddr, 40, y, { align: "center" });
+    y += splitAddr.length * 3.2;
+  }
+  if (storePhone) {
+    doc.text(`Telp: ${storePhone}`, 40, y, { align: "center" });
+    y += 3.5;
+  }
   doc.text("Bukti Transaksi Kasir", 40, y, { align: "center" });
   y += 4;
 
@@ -127,12 +143,14 @@ export function generateReceiptPdf(data: PrintDocumentData) {
 
   // Footer
   doc.setFontSize(7);
-  doc.text("Barang yang dibeli tidak dapat ditukar/", 40, y, { align: "center" });
-  y += 3;
-  doc.text("dikembalikan tanpa persetujuan toko.", 40, y, { align: "center" });
-  y += 3.5;
+  const footerNote =
+    data.settings?.footerNotes ||
+    "Barang yang dibeli tidak dapat ditukar/dikembalikan tanpa persetujuan toko.";
+  const splitFooter = doc.splitTextToSize(footerNote, 70);
+  doc.text(splitFooter, 40, y, { align: "center" });
+  y += splitFooter.length * 3 + 1;
   doc.setFont("courier", "bold");
-  doc.text("TERIMA KASIH", 40, y, { align: "center" });
+  doc.text(data.settings?.footerGreeting || "TERIMA KASIH", 40, y, { align: "center" });
 
   doc.save(`Struk_${data.invoice_number}.pdf`);
 }
@@ -147,17 +165,31 @@ export function generateInvoicePdf(data: PrintDocumentData) {
   const margin = 14;
   let y = 16;
 
+  const storeName = data.settings?.storeName || "ILuvBesi";
+  const storeSubtitle = data.settings?.storeSubtitle || "Pusat Grosir & Eceran Besi Hollow Galvanis";
+  const storeAddress = data.settings?.storeAddress;
+  const storePhone = data.settings?.storePhone;
+
   // Header
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
   doc.setTextColor(15, 23, 42);
-  doc.text("ILuvBesi", margin, y);
+  doc.text(storeName, margin, y);
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(71, 85, 105);
-  doc.text("Pusat Grosir & Eceran Besi Hollow Galvanis", margin, y + 5);
-  doc.text("Faktur Penjualan Resmi", margin, y + 9);
+  let headerY = y + 4.5;
+  if (storeSubtitle) {
+    doc.text(storeSubtitle, margin, headerY);
+    headerY += 4;
+  }
+  if (storeAddress) {
+    const contactText = storePhone ? `${storeAddress} | Telp: ${storePhone}` : storeAddress;
+    doc.text(contactText, margin, headerY);
+    headerY += 4;
+  }
+  doc.text("Faktur Penjualan Resmi", margin, headerY);
 
   // Meta (Right)
   doc.setFont("helvetica", "bold");
@@ -277,6 +309,19 @@ export function generateInvoicePdf(data: PrintDocumentData) {
     doc.text(formatRupiah(data.remaining_debt), 193, y, { align: "right" });
     doc.setTextColor(15, 23, 42);
     y += 5;
+  }
+
+  // Payment Transfer Bank Info (if available)
+  if (data.settings?.bankAccountNumber) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(51, 65, 85);
+    doc.text("Pembayaran Transfer Bank:", margin, y + 2);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`${data.settings.bankName}: ${data.settings.bankAccountNumber}`, margin, y + 6);
+    doc.text(`Atas Nama: ${data.settings.bankAccountName}`, margin, y + 10);
   }
 
   // Signature lines

@@ -9,6 +9,7 @@ export interface PosShortcutsHandlers {
   onF9: () => void;
   onF10: () => void;
   onF11: () => void;
+  onF12?: () => void;
   onEscape: () => void;
 }
 
@@ -47,6 +48,10 @@ export function usePosShortcuts(handlers: PosShortcutsHandlers) {
         case "F11":
           e.preventDefault();
           handlers.onF11();
+          break;
+        case "F12":
+          e.preventDefault();
+          handlers.onF12?.();
           break;
         case "Escape":
           e.preventDefault();

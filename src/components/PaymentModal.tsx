@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { Customer, CartItem, PrintDocumentData } from "../types/pos.types";
+import type { PosSettings } from "../types/settings.types";
 import { supabase } from "../lib/supabase";
 import { formatRupiah } from "../utils/currency";
 import { getDefaultDueDateString } from "../utils/date";
@@ -13,6 +14,7 @@ interface PaymentModalProps {
   customer: Customer | null;
   cashierName: string;
   initialSubtotal: number;
+  settings?: PosSettings;
   onOpenCustomerModal: () => void;
   onSaleCompleted: () => void;
   onTriggerPrint: (docData: PrintDocumentData) => void;
@@ -49,6 +51,7 @@ export default function PaymentModal({
   customer,
   cashierName,
   initialSubtotal,
+  settings,
   onOpenCustomerModal,
   onSaleCompleted,
   onTriggerPrint,
@@ -88,7 +91,9 @@ export default function PaymentModal({
   useEffect(() => {
     if (isOpen) {
       setPaymentType("TUNAI");
-      setShowPpnOnReceipt(items.some((it) => it.include_ppn));
+      setShowPpnOnReceipt(
+        settings?.defaultShowPpn !== false && items.some((it) => it.include_ppn)
+      );
       setQrisRef("");
       setDiscountAmount(0);
       setCashReceived(initialSubtotal);
@@ -99,7 +104,7 @@ export default function PaymentModal({
       setSavedSale(null);
       setSavedSnapshot(null);
     }
-  }, [isOpen, initialSubtotal, items]);
+  }, [isOpen, initialSubtotal, items, settings?.defaultShowPpn]);
 
   // Keep cashReceived updated when total changes if using exact cash
   useEffect(() => {
@@ -228,6 +233,46 @@ export default function PaymentModal({
 
       setSavedSale(res);
       onSaleCompleted();
+
+      if (settings?.autoPrintReceipt) {
+        onTriggerPrint({
+          mode: "STRUK",
+          invoice_number: res.invoice_number,
+          sale_date: res.sale_date,
+          customer: customer
+            ? {
+                code: customer.code,
+                name: customer.name,
+                phone: customer.phone,
+                address: customer.address,
+              }
+            : null,
+          cashier_name: cashierName,
+          payment_type: res.payment_type,
+          payment_status: res.payment_status,
+          items: items.map((it) => ({
+            sku: it.sku,
+            name: it.name,
+            dimension: it.dimension,
+            thickness_mm: it.thickness_mm,
+            unit: it.unit,
+            qty: it.qty,
+            unit_price: it.unit_price,
+            discount_pct: it.discount_pct,
+            subtotal: it.subtotal,
+            include_ppn: it.include_ppn,
+          })),
+          subtotal_amount: initialSubtotal,
+          discount_amount: discountAmount,
+          tax_amount: taxAmount,
+          grand_total: res.grand_total,
+          paid_amount: res.paid_amount,
+          remaining_debt: res.remaining_debt,
+          due_date: res.due_date,
+          notes: res.notes,
+          settings,
+        });
+      }
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Gagal memproses transaksi penjualan";
@@ -275,6 +320,7 @@ export default function PaymentModal({
       remaining_debt: savedSnapshot.result.remaining_debt,
       due_date: savedSnapshot.result.due_date,
       notes: savedSnapshot.result.notes,
+      settings,
     };
   };
 

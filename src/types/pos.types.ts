@@ -1,4 +1,5 @@
 import type { Database } from "./database.types";
+import type { PosSettings } from "./settings.types";
 
 export type CashierProduct = Database["public"]["Views"]["v_cashier_products"]["Row"];
 export type Customer = Database["public"]["Tables"]["customers"]["Row"];
@@ -42,7 +43,8 @@ export type ActiveModal =
   | "CONFIRM_LOGOUT"
   | "CONFIRM_CLEAR"
   | "CASHIER_SHIFT_OPEN"
-  | "CASHIER_SHIFT_CLOSE";
+  | "CASHIER_SHIFT_CLOSE"
+  | "SETTINGS";
 
 export type PrintMode = "FAKTUR" | "SURAT_JALAN" | "STRUK";
 
@@ -79,4 +81,5 @@ export interface PrintDocumentData {
   remaining_debt: number;
   due_date?: string | null;
   notes?: string | null;
+  settings?: PosSettings;
 }
