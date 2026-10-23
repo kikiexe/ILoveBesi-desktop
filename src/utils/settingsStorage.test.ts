@@ -45,6 +45,12 @@ describe("settingsStorage", () => {
       bankAccountNumber: "9876543210",
       bankAccountName: "PT Besi Perkasa",
       defaultShowPpn: false,
+      printerConnection: "NETWORK_LAN",
+      printerIpAddress: "192.168.1.150",
+      printerPort: 9100,
+      printCopies: 2,
+      autoCutPaper: true,
+      openCashDrawer: true,
     };
 
     const saved = savePosSettings(custom);
@@ -57,6 +63,12 @@ describe("settingsStorage", () => {
     expect(loaded.bankAccountNumber).toBe("9876543210");
     expect(loaded.bankAccountName).toBe("PT Besi Perkasa");
     expect(loaded.defaultShowPpn).toBe(false);
+    expect(loaded.printerConnection).toBe("NETWORK_LAN");
+    expect(loaded.printerIpAddress).toBe("192.168.1.150");
+    expect(loaded.printerPort).toBe(9100);
+    expect(loaded.printCopies).toBe(2);
+    expect(loaded.autoCutPaper).toBe(true);
+    expect(loaded.openCashDrawer).toBe(true);
   });
 
   it("handles corrupted storage gracefully", () => {

@@ -24,6 +24,105 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
   const bankAccountNumber = data.settings?.bankAccountNumber || "";
   const bankAccountName = data.settings?.bankAccountName || "";
 
+  const renderThermalSlip = (copyTitle?: string) => (
+    <div>
+      <div className="text-center pb-2 border-b border-dashed border-black">
+        <h1 className="text-sm font-bold uppercase tracking-wider">
+          {storeName}
+        </h1>
+        <p className="text-[9px]">{storeSubtitle}</p>
+        {storeAddress && <p className="text-[8px]">{storeAddress}</p>}
+        {storePhone && <p className="text-[8px]">Telp/WA: {storePhone}</p>}
+        <p className="text-[8px] text-slate-600 mt-0.5">
+          {copyTitle ? `Bukti Kasir (${copyTitle})` : "Bukti Transaksi Kasir"}
+        </p>
+      </div>
+
+      <div className="my-1.5 text-[9px] border-b border-dashed border-black pb-1.5 space-y-0.5">
+        <div className="flex justify-between">
+          <span>No Faktur:</span>
+          <span className="font-bold">{data.invoice_number}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Waktu:</span>
+          <span>{formatWibDateTime(data.sale_date)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Kasir:</span>
+          <span>{data.cashier_name}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Pelanggan:</span>
+          <span>{data.customer ? data.customer.name : "UMUM"}</span>
+        </div>
+      </div>
+
+      <div className="my-1.5 border-b border-dashed border-black pb-1.5 space-y-1 text-[9px]">
+        {data.items.map((item, idx) => (
+          <div key={idx}>
+            <div className="font-bold truncate">{item.name}</div>
+            <div className="flex justify-between pl-1">
+              <span>
+                {item.qty} {item.unit || "BTG"} x {formatRupiah(item.unit_price)}
+                {item.discount_pct > 0 && ` (-${item.discount_pct}%)`}
+              </span>
+              <span className="font-bold">{formatRupiah(item.subtotal)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="my-1.5 text-[9px] space-y-0.5">
+        <div className="flex justify-between">
+          <span>Subtotal:</span>
+          <span>{formatRupiah(data.subtotal_amount)}</span>
+        </div>
+        {data.discount_amount > 0 && (
+          <div className="flex justify-between">
+            <span>Diskon:</span>
+            <span>-{formatRupiah(data.discount_amount)}</span>
+          </div>
+        )}
+        <div className="flex justify-between font-bold border-t border-dashed border-black pt-1 text-[11px]">
+          <span>TOTAL:</span>
+          <span>{formatRupiah(data.grand_total)}</span>
+        </div>
+        {data.tax_amount > 0 && (
+          <div className="flex justify-between text-[9px] text-slate-700">
+            <span>(Termasuk PPN 11%):</span>
+            <span>{formatRupiah(data.tax_amount)}</span>
+          </div>
+        )}
+        <div className="flex justify-between">
+          <span>Bayar ({data.payment_type}):</span>
+          <span>{formatRupiah(data.paid_amount)}</span>
+        </div>
+        {data.payment_type === "TUNAI" && (
+          <div className="flex justify-between">
+            <span>Kembalian:</span>
+            <span>{formatRupiah(Math.max(0, data.paid_amount - data.grand_total))}</span>
+          </div>
+        )}
+        {data.remaining_debt > 0 && (
+          <div className="flex justify-between font-bold text-red-700">
+            <span>Sisa Piutang:</span>
+            <span>{formatRupiah(data.remaining_debt)}</span>
+          </div>
+        )}
+        {data.notes && (
+          <div className="border-t border-dashed border-black pt-1 mt-1 text-[8px] text-slate-700">
+            <span>Catatan: {data.notes}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 pt-2 border-t border-dashed border-black text-center text-[8px] space-y-0.5">
+        <p>{footerNotes}</p>
+        <p className="font-bold text-[9px]">{footerGreeting}</p>
+      </div>
+    </div>
+  );
+
   return (
     <div id="printable-root" className="hidden">
       {/* ========================================================= */}
@@ -31,93 +130,13 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
       {/* ========================================================= */}
       {isStruk && (
         <div className={`${is58mm ? "w-[48mm]" : "w-[72mm]"} p-2 font-mono text-[10px] leading-tight text-black mx-auto`}>
-          <div className="text-center pb-2 border-b border-dashed border-black">
-            <h1 className="text-sm font-bold uppercase tracking-wider">
-              {storeName}
-            </h1>
-            <p className="text-[9px]">{storeSubtitle}</p>
-            {storeAddress && <p className="text-[8px]">{storeAddress}</p>}
-            {storePhone && <p className="text-[8px]">Telp/WA: {storePhone}</p>}
-            <p className="text-[8px] text-slate-600 mt-0.5">Bukti Transaksi Kasir</p>
-          </div>
+          {renderThermalSlip(data.settings?.printCopies === 2 ? "Lembar Pelanggan" : undefined)}
 
-          <div className="my-1.5 text-[9px] border-b border-dashed border-black pb-1.5 space-y-0.5">
-            <div className="flex justify-between">
-              <span>No Faktur:</span>
-              <span className="font-bold">{data.invoice_number}</span>
+          {data.settings?.printCopies === 2 && (
+            <div className="mt-4 pt-4 border-t-2 border-dashed border-black">
+              {renderThermalSlip("Salinan Toko")}
             </div>
-            <div className="flex justify-between">
-              <span>Waktu:</span>
-              <span>{formatWibDateTime(data.sale_date)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Kasir:</span>
-              <span>{data.cashier_name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Pelanggan:</span>
-              <span>{data.customer ? data.customer.name : "UMUM"}</span>
-            </div>
-          </div>
-
-          <div className="my-1.5 border-b border-dashed border-black pb-1.5 space-y-1 text-[9px]">
-            {data.items.map((item, idx) => (
-              <div key={idx}>
-                <div className="font-bold truncate">{item.name}</div>
-                <div className="flex justify-between pl-1">
-                  <span>
-                    {item.qty} {item.unit || "BTG"} x {formatRupiah(item.unit_price)}
-                    {item.discount_pct > 0 && ` (-${item.discount_pct}%)`}
-                  </span>
-                  <span className="font-bold">{formatRupiah(item.subtotal)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="my-1.5 text-[9px] space-y-0.5">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span>{formatRupiah(data.subtotal_amount)}</span>
-            </div>
-            {data.discount_amount > 0 && (
-              <div className="flex justify-between">
-                <span>Diskon:</span>
-                <span>-{formatRupiah(data.discount_amount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-bold border-t border-dashed border-black pt-1 text-[11px]">
-              <span>TOTAL:</span>
-              <span>{formatRupiah(data.grand_total)}</span>
-            </div>
-            {data.tax_amount > 0 && (
-              <div className="flex justify-between text-[9px] text-slate-700">
-                <span>(Termasuk PPN 11%):</span>
-                <span>{formatRupiah(data.tax_amount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span>Bayar ({data.payment_type}):</span>
-              <span>{formatRupiah(data.paid_amount)}</span>
-            </div>
-            {data.payment_type === "TUNAI" && (
-              <div className="flex justify-between">
-                <span>Kembalian:</span>
-                <span>{formatRupiah(Math.max(0, data.paid_amount - data.grand_total))}</span>
-              </div>
-            )}
-            {data.remaining_debt > 0 && (
-              <div className="flex justify-between font-bold text-red-700">
-                <span>Sisa Piutang:</span>
-                <span>{formatRupiah(data.remaining_debt)}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-dashed border-black text-center text-[8px] space-y-0.5">
-            <p>{footerNotes}</p>
-            <p className="font-bold text-[9px]">{footerGreeting}</p>
-          </div>
+          )}
         </div>
       )}
 

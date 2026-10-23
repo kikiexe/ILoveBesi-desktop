@@ -308,12 +308,50 @@ export default function App() {
   const handleTriggerPrint = (docData: PrintDocumentData) => {
     setPrintDocumentData({
       ...docData,
-      settings: posSettings,
+      settings: docData.settings || posSettings,
     });
     // Allow DOM to update printable area before print dialog
     setTimeout(() => {
       window.print();
     }, 150);
+  };
+
+  const handleTestPrint = (testSettings: PosSettings) => {
+    handleTriggerPrint({
+      mode: "STRUK",
+      invoice_number: `TEST-${Date.now().toString().slice(-4)}`,
+      sale_date: new Date().toISOString(),
+      customer: {
+        code: "TEST-01",
+        name: "UJI KONEKSI PRINTER",
+        phone: "-",
+        address: "-",
+      },
+      cashier_name: activeShift?.cashier_name || currentUser?.fullName || "Admin Kasir",
+      payment_type: "TUNAI",
+      payment_status: "LUNAS",
+      items: [
+        {
+          sku: "TEST-PRN",
+          name: "Uji Koneksi Perangkat Kasir",
+          dimension: testSettings.paperWidth,
+          thickness_mm: 1.0,
+          qty: 1,
+          unit_price: 0,
+          discount_pct: 0,
+          subtotal: 0,
+          include_ppn: false,
+        },
+      ],
+      subtotal_amount: 0,
+      discount_amount: 0,
+      tax_amount: 0,
+      grand_total: 0,
+      paid_amount: 0,
+      remaining_debt: 0,
+      notes: `Koneksi: ${testSettings.printerConnection} | Target: ${testSettings.printerConnection === "NETWORK_LAN" ? `${testSettings.printerIpAddress}:${testSettings.printerPort}` : testSettings.printerTargetName} | Kertas: ${testSettings.paperWidth} | Salinan: ${testSettings.printCopies}x | AutoCut: ${testSettings.autoCutPaper ? "YA" : "TIDAK"} | Laci: ${testSettings.openCashDrawer ? "YA" : "TIDAK"}`,
+      settings: testSettings,
+    });
   };
 
   // App exit / logout
@@ -612,6 +650,7 @@ export default function App() {
           savePosSettings(newSettings);
           setPosSettings(newSettings);
         }}
+        onTestPrint={handleTestPrint}
       />
 
       {/* Komponen Cetak Faktur & Surat Jalan (@media print) */}
