@@ -7,7 +7,7 @@ interface PrintableDocumentProps {
 }
 
 export default function PrintableDocument({ data }: PrintableDocumentProps) {
-  if (!data) return null;
+  if (!data) return <div id="printable-root" className="hidden" />;
 
   const isFaktur = data.mode === "FAKTUR";
   const isStruk = data.mode === "STRUK";

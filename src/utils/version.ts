@@ -1,6 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
 
-export const FALLBACK_APP_VERSION = "1.1.4";
+export const FALLBACK_APP_VERSION = "1.1.5";
 
 export async function getAppVersion(): Promise<string> {
   try {

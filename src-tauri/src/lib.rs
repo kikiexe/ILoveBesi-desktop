@@ -11,7 +11,7 @@ use std::os::unix::io::AsRawFd;
 
 #[tauri::command]
 fn get_app_info() -> String {
-    "ILoveBesi POS Desktop v1.1.4".to_string()
+    "ILoveBesi POS Desktop v1.1.5".to_string()
 }
 
 #[tauri::command]

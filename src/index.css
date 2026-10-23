@@ -10,8 +10,8 @@
 /* Print Stylesheet for POS Invoices & Warehouse Delivery Slips */
 @media print {
   @page {
-    size: 215mm 140mm;
-    margin: 5mm;
+    size: auto;
+    margin: 4mm;
   }
 
   body {

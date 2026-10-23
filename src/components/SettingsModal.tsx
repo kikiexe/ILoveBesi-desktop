@@ -98,7 +98,7 @@ export default function SettingsModal({
                   [F12] Pengaturan Toko & Kasir POS
                 </h2>
                 <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-mono font-bold text-blue-900 border border-blue-200">
-                  v{appVersion || "1.1.4"}
+                  v{appVersion || "1.1.5"}
                 </span>
               </div>
               <p className="text-xs text-slate-700">
@@ -339,6 +339,11 @@ export default function SettingsModal({
                             (form.printerTargetName === "Default System Printer" || !form.printerTargetName.trim())
                           ) {
                             updates.printerTargetName = "/dev/rfcomm0";
+                          } else if (
+                            conn.key === "SYSTEM_DRIVER" &&
+                            (form.printerTargetName.startsWith("/dev/") || form.printerTargetName.startsWith("COM") || !form.printerTargetName.trim())
+                          ) {
+                            updates.printerTargetName = "Default System Printer";
                           }
                           setForm({ ...form, ...updates });
                         }}
