@@ -29,6 +29,7 @@ import { getPosSettings, savePosSettings } from "./utils/settingsStorage";
 import type { PosSettings } from "./types/settings.types";
 import { invoke } from "@tauri-apps/api/core";
 import { formatThermalTextReceipt } from "./utils/thermalTextReceipt";
+import { getAppVersion, FALLBACK_APP_VERSION } from "./utils/version";
 
 interface CurrentUser {
   id: string;
@@ -58,6 +59,15 @@ export default function App() {
 
   // Settings state
   const [posSettings, setPosSettings] = useState<PosSettings>(getPosSettings);
+
+  // App version state
+  const [appVersion, setAppVersion] = useState<string>(FALLBACK_APP_VERSION);
+
+  useEffect(() => {
+    getAppVersion().then((ver) => {
+      if (ver) setAppVersion(ver);
+    });
+  }, []);
 
   // Print document state
   const [printDocumentData, setPrintDocumentData] = useState<PrintDocumentData | null>(null);
@@ -478,6 +488,7 @@ export default function App() {
         selectedCustomer={selectedCustomer}
         grandTotal={grandTotal}
         storeName={posSettings.storeName}
+        appVersion={appVersion}
         onOpenCustomerModal={() => setActiveModal("CUSTOMER")}
         onOpenSettings={() => setActiveModal("SETTINGS")}
       />
@@ -678,6 +689,7 @@ export default function App() {
           quickInputRef.current?.focusSearch();
         }}
         settings={posSettings}
+        appVersion={appVersion}
         onSaveSettings={(newSettings) => {
           savePosSettings(newSettings);
           setPosSettings(newSettings);

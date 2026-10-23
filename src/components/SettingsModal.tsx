@@ -5,6 +5,7 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   settings: PosSettings;
+  appVersion?: string;
   onSaveSettings: (newSettings: PosSettings) => void;
   onTestPrint?: (settings: PosSettings) => void;
 }
@@ -15,6 +16,7 @@ export default function SettingsModal({
   isOpen,
   onClose,
   settings,
+  appVersion,
   onSaveSettings,
   onTestPrint,
 }: SettingsModalProps) {
@@ -76,9 +78,14 @@ export default function SettingsModal({
               </svg>
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">
-                [F12] Pengaturan Toko & Kasir POS
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900">
+                  [F12] Pengaturan Toko & Kasir POS
+                </h2>
+                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-mono font-bold text-blue-900 border border-blue-200">
+                  v{appVersion || "1.1.3"}
+                </span>
+              </div>
               <p className="text-xs text-slate-700">
                 Konfigurasi identitas toko, rekening faktur, dan koneksi perangkat printer kasir
               </p>

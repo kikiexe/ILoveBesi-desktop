@@ -10,6 +10,7 @@ interface PosHeaderProps {
   selectedCustomer: Customer | null;
   grandTotal: number;
   storeName?: string;
+  appVersion?: string;
   onOpenCustomerModal: () => void;
   onOpenSettings?: () => void;
   onLogoutRequest?: () => void;
@@ -22,6 +23,7 @@ export default function PosHeader({
   selectedCustomer,
   grandTotal,
   storeName,
+  appVersion,
   onOpenCustomerModal,
   onOpenSettings,
 }: PosHeaderProps) {
@@ -46,6 +48,12 @@ export default function PosHeader({
           </span>
           <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 border border-slate-200">
             Kasir POS
+          </span>
+          <span
+            className="rounded bg-blue-50 px-2 py-0.5 text-[11px] font-mono font-bold text-blue-900 border border-blue-200"
+            title="Versi Rilis Aplikasi Desktop POS"
+          >
+            v{appVersion || "1.1.3"}
           </span>
           <span className="text-xs font-mono font-medium text-slate-700">
             No: Otomatis saat simpan
