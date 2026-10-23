@@ -485,6 +485,7 @@ export default function App() {
               discount_pct: 0,
               tax_pct: 0,
               subtotal: Number(p.sell_price || 0),
+              include_ppn: Boolean(p.include_ppn),
             });
           }, 50);
         }}

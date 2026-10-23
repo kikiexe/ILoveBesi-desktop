@@ -152,6 +152,7 @@ const QuickItemInput = forwardRef<QuickItemInputHandle, QuickItemInputProps>(
         discount_pct: discountPct,
         tax_pct: 0,
         subtotal,
+        include_ppn: Boolean(selectedProduct.include_ppn),
       };
 
       onAddItem(newItem);
@@ -222,7 +223,14 @@ const QuickItemInput = forwardRef<QuickItemInputHandle, QuickItemInputProps>(
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-mono">{p.sku}</span>
-                      <span className="font-bold">{p.name}</span>
+                      <span className="font-bold flex items-center gap-1.5">
+                        {p.name}
+                        {p.include_ppn && (
+                          <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-800 border border-blue-200">
+                            PPN
+                          </span>
+                        )}
+                      </span>
                       <span className="tabular-nums">
                         Tebal: {formatThickness(Number(p.thickness_mm))}
                       </span>

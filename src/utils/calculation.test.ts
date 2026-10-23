@@ -54,6 +54,7 @@ describe("calculateInvoiceTotals", () => {
       discount_pct: 0,
       tax_pct: 0,
       subtotal: 1750000,
+      include_ppn: true,
     },
     {
       product_id: "p2",
@@ -68,6 +69,7 @@ describe("calculateInvoiceTotals", () => {
       discount_pct: 0,
       tax_pct: 0,
       subtotal: 450000,
+      include_ppn: false,
     },
   ];
 

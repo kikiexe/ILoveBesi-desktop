@@ -194,7 +194,14 @@ export default function StockLookupModal({
                           {p.sku}
                         </td>
                         <td className="px-3 py-2 font-semibold text-slate-900">
-                          {p.name}
+                          <div className="flex items-center gap-1.5">
+                            <span>{p.name}</span>
+                            {p.include_ppn && (
+                              <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-800 border border-blue-200">
+                                PPN
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-slate-700">{p.dimension || "-"}</td>
                         <td className="px-3 py-2 text-right font-mono tabular-nums text-slate-900">

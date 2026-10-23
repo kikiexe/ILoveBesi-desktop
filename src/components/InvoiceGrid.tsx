@@ -76,7 +76,18 @@ export default function InvoiceGrid({
                   {item.sku}
                 </td>
                 <td className="px-3 py-2">
-                  <div className="font-bold text-slate-900">{item.name}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-900">{item.name}</span>
+                    {item.include_ppn ? (
+                      <span className="inline-flex items-center rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-800 border border-blue-200">
+                        PPN
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-medium text-slate-500 border border-slate-200">
+                        Non-PPN
+                      </span>
+                    )}
+                  </div>
                   {item.dimension && item.dimension !== "-" && (
                     <div className="text-[11px] text-slate-700">
                       Dimensi: {item.dimension}

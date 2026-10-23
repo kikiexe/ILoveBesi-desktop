@@ -54,7 +54,7 @@ export default function PaymentModal({
   onTriggerPrint,
 }: PaymentModalProps) {
   const [paymentType, setPaymentType] = useState<"TUNAI" | "QRIS" | "KREDIT">("TUNAI");
-  const [ppnOption, setPpnOption] = useState<PpnOption>("NON_PPN");
+  const [showPpnOnReceipt, setShowPpnOnReceipt] = useState<boolean>(true);
   const [qrisRef, setQrisRef] = useState<string>("");
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [cashReceived, setCashReceived] = useState<number>(0);
@@ -67,16 +67,20 @@ export default function PaymentModal({
   const [savedSale, setSavedSale] = useState<SavedSaleResult | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState<SavedSaleSnapshot | null>(null);
 
-  // Recalculate totals with PPN handling
-  const dppAmount = Math.max(0, initialSubtotal - discountAmount);
-  const taxAmount =
-    ppnOption === "INCLUDE_PPN"
-      ? Math.round(dppAmount - dppAmount / 1.11)
-      : ppnOption === "EXCLUDE_PPN"
-      ? Math.round(dppAmount * 0.11)
-      : 0;
+  // Recalculate totals with Item-Level PPN handling (prices are inclusive of PPN)
+  const ppnEligibleSubtotal = items
+    .filter((it) => it.include_ppn)
+    .reduce((sum, it) => sum + it.subtotal, 0);
 
-  const grandTotal = ppnOption === "EXCLUDE_PPN" ? dppAmount + taxAmount : dppAmount;
+  // Apply discount proportionally to eligible items
+  const discountFactor = initialSubtotal > 0 ? Math.max(0, 1 - discountAmount / initialSubtotal) : 1;
+  const netPpnEligibleSubtotal = ppnEligibleSubtotal * discountFactor;
+  const calculatedTaxAmount = netPpnEligibleSubtotal > 0
+    ? Math.round(netPpnEligibleSubtotal - netPpnEligibleSubtotal / 1.11)
+    : 0;
+
+  const taxAmount = showPpnOnReceipt ? calculatedTaxAmount : 0;
+  const grandTotal = Math.max(0, initialSubtotal - discountAmount);
   const changeAmount = Math.max(0, cashReceived - grandTotal);
   const remainingDebt = Math.max(0, grandTotal - downPayment);
 
@@ -84,7 +88,7 @@ export default function PaymentModal({
   useEffect(() => {
     if (isOpen) {
       setPaymentType("TUNAI");
-      setPpnOption("NON_PPN");
+      setShowPpnOnReceipt(items.some((it) => it.include_ppn));
       setQrisRef("");
       setDiscountAmount(0);
       setCashReceived(initialSubtotal);
@@ -95,7 +99,7 @@ export default function PaymentModal({
       setSavedSale(null);
       setSavedSnapshot(null);
     }
-  }, [isOpen, initialSubtotal]);
+  }, [isOpen, initialSubtotal, items]);
 
   // Keep cashReceived updated when total changes if using exact cash
   useEffect(() => {
@@ -261,6 +265,7 @@ export default function PaymentModal({
         unit_price: it.unit_price,
         discount_pct: it.discount_pct,
         subtotal: it.subtotal,
+        include_ppn: it.include_ppn,
       })),
       subtotal_amount: savedSnapshot.subtotalAmount,
       discount_amount: savedSnapshot.discountAmount,
@@ -521,57 +526,37 @@ export default function PaymentModal({
               </div>
             </div>
 
-            {/* Pengaturan Perlakuan PPN (Include / Exclude / Non-PPN) */}
+            {/* Pengaturan Keterangan PPN di Nota / Struk */}
             <div className="rounded border border-slate-200 bg-slate-50 p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-slate-900">Perlakuan Pajak PPN:</span>
-                <span className="text-[11px] font-mono text-slate-600">Tarif 11%</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPpnOption("NON_PPN")}
-                  className={`h-9 rounded border text-xs font-semibold ${
-                    ppnOption === "NON_PPN"
-                      ? "border-blue-900 bg-blue-100/80 text-blue-900 font-bold"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  Non-PPN (0%)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPpnOption("INCLUDE_PPN")}
-                  className={`h-9 rounded border text-xs font-semibold ${
-                    ppnOption === "INCLUDE_PPN"
-                      ? "border-blue-900 bg-blue-100/80 text-blue-900 font-bold"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  Include PPN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPpnOption("EXCLUDE_PPN")}
-                  className={`h-9 rounded border text-xs font-semibold ${
-                    ppnOption === "EXCLUDE_PPN"
-                      ? "border-blue-900 bg-blue-100/80 text-blue-900 font-bold"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  Exclude PPN (+11%)
-                </button>
-              </div>
-              {ppnOption === "INCLUDE_PPN" && (
-                <div className="mt-2 text-[11px] text-slate-600 flex justify-between">
-                  <span>DPP (Dasar Pengenaan Pajak): {formatRupiah(dppAmount - taxAmount)}</span>
-                  <span className="font-semibold text-blue-900">PPN (11% Termasuk): {formatRupiah(taxAmount)}</span>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-slate-900">
+                    Tampilkan Rincian PPN di Nota / Struk
+                  </div>
+                  <div className="text-[11px] text-slate-600">
+                    {ppnEligibleSubtotal > 0
+                      ? `Dihitung otomatis dari ${items.filter((it) => it.include_ppn).length} barang berstatus PPN`
+                      : "Semua barang di keranjang berstatus Non-PPN"}
+                  </div>
                 </div>
-              )}
-              {ppnOption === "EXCLUDE_PPN" && (
-                <div className="mt-2 text-[11px] text-slate-600 flex justify-between">
-                  <span>Subtotal Dasar: {formatRupiah(dppAmount)}</span>
-                  <span className="font-semibold text-blue-900">+ PPN (11% Tambahan): {formatRupiah(taxAmount)}</span>
+
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={showPpnOnReceipt}
+                    onChange={(e) => setShowPpnOnReceipt(e.target.checked)}
+                    className="peer sr-only"
+                  />
+                  <div className="h-6 w-11 rounded-full bg-slate-300 peer-checked:bg-blue-900 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-900 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+
+              {showPpnOnReceipt && calculatedTaxAmount > 0 && (
+                <div className="mt-2.5 flex items-center justify-between border-t border-slate-200 pt-2 text-xs">
+                  <span className="text-slate-700">Termasuk PPN 11%:</span>
+                  <span className="font-mono font-bold text-blue-900">
+                    {formatRupiah(calculatedTaxAmount)}
+                  </span>
                 </div>
               )}
             </div>

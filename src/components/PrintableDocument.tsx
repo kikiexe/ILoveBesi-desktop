@@ -73,16 +73,16 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
                 <span>-{formatRupiah(data.discount_amount)}</span>
               </div>
             )}
-            {data.tax_amount > 0 && (
-              <div className="flex justify-between">
-                <span>PPN:</span>
-                <span>+{formatRupiah(data.tax_amount)}</span>
-              </div>
-            )}
             <div className="flex justify-between font-bold border-t border-dashed border-black pt-1 text-[11px]">
               <span>TOTAL:</span>
               <span>{formatRupiah(data.grand_total)}</span>
             </div>
+            {data.tax_amount > 0 && (
+              <div className="flex justify-between text-[9px] text-slate-700">
+                <span>(Termasuk PPN 11%):</span>
+                <span>{formatRupiah(data.tax_amount)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span>Bayar ({data.payment_type}):</span>
               <span>{formatRupiah(data.paid_amount)}</span>
@@ -233,16 +233,16 @@ export default function PrintableDocument({ data }: PrintableDocumentProps) {
                   <span>- {formatRupiah(data.discount_amount)}</span>
                 </div>
               )}
-              {data.tax_amount > 0 && (
-                <div className="flex justify-between">
-                  <span>PPN (11%):</span>
-                  <span>+ {formatRupiah(data.tax_amount)}</span>
-                </div>
-              )}
               <div className="flex justify-between border-t border-black pt-1 font-bold text-xs">
                 <span>Grand Total:</span>
                 <span>{formatRupiah(data.grand_total)}</span>
               </div>
+              {data.tax_amount > 0 && (
+                <div className="flex justify-between text-[11px] text-slate-700">
+                  <span>(Termasuk PPN 11%):</span>
+                  <span>{formatRupiah(data.tax_amount)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Dibayar / DP:</span>
                 <span>{formatRupiah(data.paid_amount)}</span>

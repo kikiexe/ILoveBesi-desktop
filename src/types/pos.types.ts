@@ -20,6 +20,7 @@ export interface CartItem {
   discount_pct: number;
   tax_pct: number;
   subtotal: number;
+  include_ppn: boolean;
 }
 
 export interface DraftInvoice {
@@ -68,6 +69,7 @@ export interface PrintDocumentData {
     unit_price: number;
     discount_pct: number;
     subtotal: number;
+    include_ppn?: boolean;
   }[];
   subtotal_amount: number;
   discount_amount: number;
