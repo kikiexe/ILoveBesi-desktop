@@ -519,7 +519,8 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-slate-100 select-none">
+    <>
+      <div className="no-print flex h-screen w-screen flex-col overflow-hidden bg-slate-100 select-none">
       {/* 1. Bar Atas: Info Toko, Jam, Kasir, Status Pelanggan, Kotak Total Besar */}
       <PosHeader
         cashierName={activeShift?.cashier_name || currentUser.fullName}
@@ -736,9 +737,10 @@ export default function App() {
         }}
         onTestPrint={handleTestPrint}
       />
-
-      {/* Komponen Cetak Faktur & Surat Jalan (@media print) */}
-      <PrintableDocument data={printDocumentData} />
     </div>
-  );
+
+    {/* Komponen Cetak Faktur & Surat Jalan (@media print) */}
+    <PrintableDocument data={printDocumentData} />
+  </>
+);
 }

@@ -332,7 +332,16 @@ export default function SettingsModal({
                       <button
                         key={conn.key}
                         type="button"
-                        onClick={() => setForm({ ...form, printerConnection: conn.key })}
+                        onClick={() => {
+                          const updates: Partial<PosSettings> = { printerConnection: conn.key };
+                          if (
+                            conn.key === "BLUETOOTH_SERIAL" &&
+                            (form.printerTargetName === "Default System Printer" || !form.printerTargetName.trim())
+                          ) {
+                            updates.printerTargetName = "/dev/rfcomm0";
+                          }
+                          setForm({ ...form, ...updates });
+                        }}
                         className={`rounded border p-2.5 text-left transition-colors ${
                           form.printerConnection === conn.key
                             ? "border-blue-900 bg-blue-50/80 font-bold text-blue-900 ring-1 ring-blue-900"
@@ -367,32 +376,47 @@ export default function SettingsModal({
                 )}
 
                 {form.printerConnection === "NETWORK_LAN" && (
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-2">
-                      <label htmlFor="cfg-printerIpAddress" className="block text-xs font-bold text-slate-900">
-                        Alamat IP Printer Thermal (LAN / Wi-Fi)
-                      </label>
-                      <input
-                        id="cfg-printerIpAddress"
-                        type="text"
-                        value={form.printerIpAddress}
-                        onChange={(e) => setForm({ ...form, printerIpAddress: e.target.value })}
-                        placeholder="Contoh: 192.168.1.200"
-                        className="mt-1 h-10 w-full rounded border border-slate-300 bg-white px-3 text-xs font-mono font-bold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
-                      />
+                  <div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <label htmlFor="cfg-printerIpAddress" className="block text-xs font-bold text-slate-900">
+                          Alamat IP Printer Thermal (LAN / Wi-Fi)
+                        </label>
+                        <input
+                          id="cfg-printerIpAddress"
+                          type="text"
+                          value={form.printerIpAddress}
+                          onChange={(e) => setForm({ ...form, printerIpAddress: e.target.value })}
+                          placeholder="Contoh: 192.168.1.200"
+                          className="mt-1 h-10 w-full rounded border border-slate-300 bg-white px-3 text-xs font-mono font-bold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="cfg-printerPort" className="block text-xs font-bold text-slate-900">
+                          Port RAW TCP
+                        </label>
+                        <input
+                          id="cfg-printerPort"
+                          type="number"
+                          value={form.printerPort}
+                          onChange={(e) => setForm({ ...form, printerPort: Number(e.target.value) || 9100 })}
+                          placeholder="9100"
+                          className="mt-1 h-10 w-full rounded border border-slate-300 bg-white px-3 text-xs font-mono font-bold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label htmlFor="cfg-printerPort" className="block text-xs font-bold text-slate-900">
-                        Port RAW TCP
-                      </label>
-                      <input
-                        id="cfg-printerPort"
-                        type="number"
-                        value={form.printerPort}
-                        onChange={(e) => setForm({ ...form, printerPort: Number(e.target.value) || 9100 })}
-                        placeholder="9100"
-                        className="mt-1 h-10 w-full rounded border border-slate-300 bg-white px-3 text-xs font-mono font-bold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
-                      />
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[11px] text-slate-600">Pilihan cepat IP:</span>
+                      {["192.168.1.200", "192.168.1.100", "192.168.0.200", "127.0.0.1"].map((ip) => (
+                        <button
+                          key={ip}
+                          type="button"
+                          onClick={() => setForm({ ...form, printerIpAddress: ip, printerPort: 9100 })}
+                          className="rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-[10px] font-mono font-semibold text-slate-700 hover:bg-slate-200"
+                        >
+                          {ip}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -410,6 +434,19 @@ export default function SettingsModal({
                       placeholder="Contoh: COM3, COM4, atau /dev/rfcomm0"
                       className="mt-1 h-10 w-full rounded border border-slate-300 bg-white px-3 text-xs font-mono font-bold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900"
                     />
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[11px] text-slate-600">Pilihan cepat:</span>
+                      {["/dev/rfcomm0", "/dev/ttyUSB0", "COM3", "COM1"].map((suggested) => (
+                        <button
+                          key={suggested}
+                          type="button"
+                          onClick={() => setForm({ ...form, printerTargetName: suggested })}
+                          className="rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-[10px] font-mono font-semibold text-slate-700 hover:bg-slate-200"
+                        >
+                          {suggested}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
