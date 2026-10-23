@@ -27,6 +27,8 @@ import AppUpdateModal from "./components/AppUpdateModal";
 import SettingsModal from "./components/SettingsModal";
 import { getPosSettings, savePosSettings } from "./utils/settingsStorage";
 import type { PosSettings } from "./types/settings.types";
+import { invoke } from "@tauri-apps/api/core";
+import { formatThermalTextReceipt } from "./utils/thermalTextReceipt";
 
 interface CurrentUser {
   id: string;
@@ -305,12 +307,42 @@ export default function App() {
   };
 
   // Print execution
-  const handleTriggerPrint = (docData: PrintDocumentData) => {
-    setPrintDocumentData({
+  const handleTriggerPrint = async (docData: PrintDocumentData) => {
+    const effectiveSettings = docData.settings || posSettings;
+    const resolvedData: PrintDocumentData = {
       ...docData,
-      settings: docData.settings || posSettings,
-    });
-    // Allow DOM to update printable area before print dialog
+      settings: effectiveSettings,
+    };
+
+    setPrintDocumentData(resolvedData);
+
+    // Direct hardware connection via Tauri Rust (Serial port / RAW TCP LAN)
+    if (docData.mode === "STRUK" && effectiveSettings.printerConnection !== "SYSTEM_DRIVER") {
+      try {
+        const textPayload = formatThermalTextReceipt(resolvedData);
+        const targetType =
+          effectiveSettings.printerConnection === "NETWORK_LAN" ? "LAN" : "SERIAL";
+        const targetPath =
+          effectiveSettings.printerConnection === "NETWORK_LAN"
+            ? `${effectiveSettings.printerIpAddress}:${effectiveSettings.printerPort}`
+            : effectiveSettings.printerTargetName;
+
+        if (targetPath && targetPath.trim()) {
+          await invoke("print_raw_thermal", {
+            targetType,
+            targetPath: targetPath.trim(),
+            content: textPayload,
+            autoCut: Boolean(effectiveSettings.autoCutPaper),
+            openDrawer: Boolean(effectiveSettings.openCashDrawer),
+          });
+          return;
+        }
+      } catch (err: unknown) {
+        console.warn("Direct thermal print gagal, fallback ke print dialog OS:", err);
+      }
+    }
+
+    // Default OS Print dialog (CUPS / Spooler) for SYSTEM_DRIVER or Faktur A4
     setTimeout(() => {
       window.print();
     }, 150);
